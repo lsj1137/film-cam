@@ -199,7 +199,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   background: var(--panel);
   border: 1px solid #3a332d;
 }
-.pill.primary { background: var(--accent); border-color: var(--accent); color: #1a120a; font-weight: 600; }
 
 [hidden] { display: none !important; }
 
@@ -460,7 +459,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .compare.solo .compare-line,
 .compare.solo .compare-tag { display: none; }
 .text-btn { font-size: 17px; color: #fff; padding: 8px 4px; }
-.text-btn.strong { font-weight: 600; }
 .stamp-btn {
   display: flex;
   align-items: center;

@@ -21,6 +21,7 @@ export function compose(bitmap, style, meta) {
   c.height = h;
   const ctx = c.getContext('2d');
   ctx.drawImage(bitmap, 0, 0);
+  // 표시 없음이면 여기서 끝 (호출하는 쪽에서 보통 건너뜀)
   if (style === 'date') drawDateStamp(ctx, w, h, meta.date, meta.showTime);
   return c;
 }
@@ -93,7 +94,9 @@ function drawDigit(ctx, segs, x, y, w, h) {
 
 function drawSegmentBar(ctx, x, y, w, h) {
   ctx.beginPath();
-  ctx.roundRect(x, y, w, h, w / 2);
+  // roundRect 는 iOS 16부터 지원
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, w / 2);
+  else ctx.rect(x, y, w, h);
   ctx.fill();
 }
 

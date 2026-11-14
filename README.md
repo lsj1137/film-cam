@@ -5,6 +5,8 @@
 - 주소: https://cam.stillim.dev
 - 필름 색감: `film.js` (WebGL 셰이더, 프리셋 수치는 `PRESETS`)
 - 화면·촬영·저장: `app.js`
+- 날짜 스탬프·정보 프레임: `stamp.js`
+- 저장 파일 촬영일 EXIF: `exif.js`
 
 ## 로컬 실행
 
@@ -25,5 +27,6 @@ nginx 설정은 `deploy/cam.stillim.dev.conf` (서버 `/etc/nginx/sites-availabl
 
 ## 테스트 도구 (`dev/`)
 
-- `dev/test.html` — 테스트 이미지에 프리셋 3종을 나란히 렌더
+- `dev/e2e.mjs` — 전체 기능 자동 점검 (헤드리스 Chrome + 가짜 카메라). `node dev/e2e.mjs [주소]`
+- `dev/test.html` — 테스트 이미지에 프리셋을 나란히 렌더
 - `dev/cdp.mjs` — 헤드리스 Chrome + 가짜 카메라로 페이지 상태 확인

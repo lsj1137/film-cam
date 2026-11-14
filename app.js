@@ -13,7 +13,8 @@ const closeImage = $('#closeImage');
 const review = $('#review');
 const reviewImg = $('#reviewImg');
 
-const MAX_IMAGE_SIDE = 4096;
+// 아이폰 캔버스 최대 면적(약 16.7MP)을 정보 프레임 여백까지 붙여도 넘지 않는 크기
+const MAX_IMAGE_SIDE = 3200;
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const RATIOS = [
   { label: '3:4', value: 3 / 4 },
@@ -49,11 +50,12 @@ const state = {
   title: '',          // 정보 프레임 제목
   showTime: localStorage.getItem('stampTime') === 'on', // 날짜 스탬프에 시간도 넣을지
   out: null,          // 저장할 최종 파일 { film, original }
+  rendering: false,   // 최종 파일을 만드는 중 (그동안 저장 막기)
   zoom: 1,
   nativeZoom: null,   // 카메라 자체 줌 범위 {min, max} (지원할 때만)
   imageCanvas: null,
-  shotBlob: null,
   shotUrl: null,
+  originalUrl: null,
 };
 
 // ---------- 필름 선택: 쉐브론으로 여닫는 가로 캐러셀 ----------
@@ -63,7 +65,7 @@ const carousel = $('#filmCarousel');
 for (const p of PRESETS) {
   const btn = document.createElement('button');
   btn.className = 'film-item';
-  btn.role = 'option';
+  btn.setAttribute('role', 'option');
   btn.dataset.id = p.id;
   btn.textContent = p.label;
   btn.addEventListener('click', () => {
@@ -385,18 +387,31 @@ const originalImg = $('#originalImg');
 
 const canvasToBlob = (c) => new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92));
 
+// 아이폰은 캔버스 메모리 총량 제한이 있어서, 다 쓴 큰 캔버스·비트맵은 바로 비워 준다
+function release(img) {
+  if (!img) return;
+  if (img instanceof HTMLCanvasElement) img.width = img.height = 0;
+  else img.close?.();
+}
+
 async function showShot(film, original, meta, deg = 0) {
   let [filmBmp, originalBmp] = await Promise.all([createImageBitmap(film), createImageBitmap(original)]);
   if (deg) {
-    filmBmp = rotate(filmBmp, deg);
-    originalBmp = rotate(originalBmp, deg);
+    const [f, o] = [rotate(filmBmp, deg), rotate(originalBmp, deg)];
+    release(filmBmp);
+    release(originalBmp);
+    [filmBmp, originalBmp] = [f, o];
     [film, original] = await Promise.all([canvasToBlob(filmBmp), canvasToBlob(originalBmp)]);
   }
+  release(state.shot?.filmBmp);
+  release(state.shot?.originalBmp);
   state.shot = { film, original, filmBmp, originalBmp, meta };
   state.rotation = 0;
   state.title = '';
   updateFrameTools();
+  state.out = null;
   await renderReview();
+  if (!state.out) return; // 만들기 실패 (안내는 renderReview 에서) — 이전 사진이 대신 뜨지 않게
   setComparePos(0.5);
   setSaveSheet(false);
   review.hidden = false;
@@ -404,10 +419,24 @@ async function showShot(film, original, meta, deg = 0) {
 
 // 날짜·정보 표시를 적용한 최종 파일을 만들고 미리보기에 띄운다.
 // 저장 버튼을 누른 뒤에 만들면 아이폰 공유 시트가 막힐 수 있어서 미리 만들어 둔다.
+// 버튼을 빠르게 여러 번 누르면 이전 작업이 늦게 끝날 수 있어서, 가장 마지막 요청 결과만 반영한다
+let reviewToken = 0;
+
 async function renderReview() {
+  const token = ++reviewToken;
+  state.rendering = true;
+  try {
+    await buildReview(token);
+  } catch {
+    if (token === reviewToken) toast('사진을 만들지 못했어요. 다시 시도해 주세요.');
+  } finally {
+    if (token === reviewToken) state.rendering = false;
+  }
+}
+
+async function buildReview(token) {
   const { film, original, filmBmp, originalBmp, meta } = state.shot;
   const style = state.stamp.id;
-  const toBlob = canvasToBlob;
   let filmOut = film;
   let originalOut = original;
   let ar = filmBmp.width / filmBmp.height;
@@ -419,19 +448,27 @@ async function renderReview() {
     const info = { ...meta, title: state.title, showTime: state.showTime };
     const fc = compose(filmSrc, style, info);
     const oc = compose(originalSrc, style, info);
-    [filmOut, originalOut] = await Promise.all([toBlob(fc), toBlob(oc)]);
+    [filmOut, originalOut] = await Promise.all([canvasToBlob(fc), canvasToBlob(oc)]);
     ar = fc.width / fc.height;
     if (style === 'frame') {
       const pad = framePad(filmSrc.width, filmSrc.height);
       inset = [`${(pad / fc.width) * 100}%`, `${(pad / fc.height) * 100}%`];
     }
+    release(fc);
+    release(oc);
+    if (filmSrc !== filmBmp) release(filmSrc);
+    if (originalSrc !== originalBmp) release(originalSrc);
   }
-  compare.style.setProperty('--inset-x', inset[0]);
-  compare.style.setProperty('--inset-y', inset[1]);
+  // 캔버스가 너무 크거나 메모리가 모자라면 toBlob 이 null 을 준다
+  if (!filmOut || !originalOut) throw new Error('toBlob failed');
   [filmOut, originalOut] = await Promise.all([
     withExif(filmOut, { date: meta.date, description: `FilmCam ${meta.filmId}` }),
     withExif(originalOut, { date: meta.date, description: 'FilmCam original' }),
   ]);
+  if (token !== reviewToken) return; // 그 사이 더 새로운 요청이 들어옴
+
+  compare.style.setProperty('--inset-x', inset[0]);
+  compare.style.setProperty('--inset-y', inset[1]);
   state.out = { film: filmOut, original: originalOut };
 
   if (state.shotUrl) URL.revokeObjectURL(state.shotUrl);
@@ -531,7 +568,10 @@ function closeReview() {
 }
 
 $('#discardBtn').addEventListener('click', closeReview);
-$('#saveBtn').addEventListener('click', () => setSaveSheet(true));
+$('#saveBtn').addEventListener('click', () => {
+  if (state.rendering || !state.out) return; // 바뀐 설정으로 아직 만드는 중
+  setSaveSheet(true);
+});
 $('#saveCancel').addEventListener('click', () => setSaveSheet(false));
 $('#saveFilmOnly').addEventListener('click', () => save(false));
 $('#saveWithOriginal').addEventListener('click', () => save(true));
