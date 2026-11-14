@@ -46,6 +46,8 @@ await sleep(3500);
 await run(`
   const q = (s) => document.querySelector(s);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // 오류 알림창이 뜨면 헤드리스에서 멈추므로 기록만 한다
+  window.alert = (m) => console.error('alert: ' + m);
   window.T = {
     q, sleep,
     downloads: [],
@@ -68,8 +70,11 @@ await run(`
     },
     async loadImage(path, w, h, date) {
       let blob;
-      if (path) blob = await (await fetch(path)).blob();
-      else { const c = new OffscreenCanvas(w, h); const x = c.getContext('2d'); x.fillStyle = '#7a6'; x.fillRect(0, 0, w, h); blob = await c.convertToBlob({ type: 'image/jpeg' }); }
+      // 실서버에는 dev/ 가 없으니 못 받으면 같은 크기(900×1200)로 만들어 쓴다
+      const res = path ? await fetch(path).catch(() => null) : null;
+      if (res?.ok) blob = await res.blob();
+      else {
+        if (path) { w = 900; h = 1200; } const c = new OffscreenCanvas(w, h); const x = c.getContext('2d'); x.fillStyle = '#7a6'; x.fillRect(0, 0, w, h); blob = await c.convertToBlob({ type: 'image/jpeg' }); }
       const dt = new DataTransfer();
       dt.items.add(new File([blob], 't.jpg', { type: 'image/jpeg', lastModified: date ?? Date.now() }));
       const input = q('#fileInput'); input.files = dt.files; input.dispatchEvent(new Event('change'));
