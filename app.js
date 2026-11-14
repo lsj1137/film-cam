@@ -120,6 +120,8 @@ function syncFrame() {
   if (Math.abs(ar - frameAr) < 1e-4) return;
   frameAr = ar;
   $('#frame').style.setProperty('--ar', ar);
+  // 세로 9:16 이면 전체화면 미리보기
+  $('.app').classList.toggle('full', state.ratio.label === '9:16' && ar < 1);
 }
 
 $('#startBtn').addEventListener('click', startCamera);
