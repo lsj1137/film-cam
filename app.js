@@ -47,6 +47,7 @@ const state = {
   shot: null,         // 찍은 사진 { film, original, meta }
   rotation: 0,        // 정보 프레임에서 사진 회전 (0/90/180/270)
   title: '',          // 정보 프레임 제목
+  showTime: localStorage.getItem('stampTime') === 'on', // 날짜 스탬프에 시간도 넣을지
   out: null,          // 저장할 최종 파일 { film, original }
   zoom: 1,
   nativeZoom: null,   // 카메라 자체 줌 범위 {min, max} (지원할 때만)
@@ -407,7 +408,7 @@ async function renderReview() {
     const deg = style === 'frame' ? state.rotation : 0;
     const filmSrc = rotate(filmBmp, deg);
     const originalSrc = rotate(originalBmp, deg);
-    const info = { ...meta, title: state.title };
+    const info = { ...meta, title: state.title, showTime: state.showTime };
     const fc = compose(filmSrc, style, info);
     const oc = compose(originalSrc, style, info);
     [filmOut, originalOut] = await Promise.all([toBlob(fc), toBlob(oc)]);
@@ -452,9 +453,19 @@ applyStampLabel();
 // ---------- 정보 프레임: 회전, 제목 ----------
 function updateFrameTools() {
   $('#frameTools').hidden = state.stamp.id !== 'frame';
+  $('#dateTools').hidden = state.stamp.id !== 'date';
+  $('#timeBtn').classList.toggle('on', state.showTime);
+  $('#timeBtn').setAttribute('aria-pressed', String(state.showTime));
   $('#titleLabel').textContent = state.title || '제목';
   $('#titleBtn').classList.toggle('on', !!state.title);
 }
+
+$('#timeBtn').addEventListener('click', async () => {
+  state.showTime = !state.showTime;
+  localStorage.setItem('stampTime', state.showTime ? 'on' : 'off');
+  updateFrameTools();
+  await renderReview();
+});
 
 $('#rotateBtn').addEventListener('click', async () => {
   state.rotation = (state.rotation + 270) % 360; // 아이콘(↺)처럼 반시계 방향

@@ -6,7 +6,7 @@ export const STAMPS = [
   { id: 'frame', label: '정보 프레임' },
 ];
 
-// meta: { date, film, zoom, title }
+// meta: { date, film, zoom, title, showTime }
 export function compose(bitmap, style, meta) {
   const w = bitmap.width;
   const h = bitmap.height;
@@ -21,7 +21,7 @@ export function compose(bitmap, style, meta) {
   c.height = h;
   const ctx = c.getContext('2d');
   ctx.drawImage(bitmap, 0, 0);
-  if (style === 'date') drawDateStamp(ctx, w, h, meta.date);
+  if (style === 'date') drawDateStamp(ctx, w, h, meta.date, meta.showTime);
   return c;
 }
 
@@ -31,7 +31,7 @@ const DIGITS = {
   5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg',
 };
 
-function drawDateStamp(ctx, w, h, date) {
+function drawDateStamp(ctx, w, h, date, showTime) {
   const short = Math.min(w, h);
   const dh = short * 0.042;         // 숫자 높이
   const dw = dh * 0.52;             // 숫자 폭
@@ -39,9 +39,10 @@ function drawDateStamp(ctx, w, h, date) {
   const yy = String(date.getFullYear()).slice(2);
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
-  const text = `'${yy} ${mm} ${dd}`;
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  const text = showTime ? `'${yy} ${mm} ${dd}  ${time}` : `'${yy} ${mm} ${dd}`;
 
-  const advance = (ch) => (ch === "'" ? dh * 0.22 : ch === ' ' ? dh * 0.42 : dw + gap);
+  const advance = (ch) => (ch === "'" ? dh * 0.22 : ch === ':' ? dh * 0.3 : ch === ' ' ? dh * 0.42 : dw + gap);
   const total = [...text].reduce((s, ch) => s + advance(ch), 0) - gap;
   const margin = short * 0.055;
   let x = w - margin - total;
@@ -56,6 +57,10 @@ function drawDateStamp(ctx, w, h, date) {
   ctx.globalAlpha = 0.9;
   for (const ch of text) {
     if (ch === "'") drawSegmentBar(ctx, x + dh * 0.04, y, dh * 0.1, dh * 0.3);
+    else if (ch === ':') {
+      drawSegmentBar(ctx, x + dh * 0.02, y + dh * 0.24, dh * 0.12, dh * 0.12);
+      drawSegmentBar(ctx, x - dh * 0.02, y + dh * 0.66, dh * 0.12, dh * 0.12);
+    }
     else if (ch !== ' ') drawDigit(ctx, DIGITS[ch], x, y, dw, dh);
     x += advance(ch);
   }
