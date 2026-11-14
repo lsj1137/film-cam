@@ -16,8 +16,21 @@
 </head>
 <body>
   <main class="app">
+    <header class="topbar">
+      <button class="top-btn" id="flashBtn" aria-label="플래시" aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/><path class="slash" d="M4 4l16 16"/></svg>
+      </button>
+      <button class="top-btn ratio" id="ratioBtn" aria-label="사진 비율">3:4</button>
+      <button class="top-btn" id="gridBtn" aria-label="격자" aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17"/></svg>
+      </button>
+    </header>
+
     <section class="viewfinder" id="viewfinder">
-      <canvas id="view"></canvas>
+      <div class="frame" id="frame">
+        <canvas id="view"></canvas>
+        <div class="grid" id="grid" hidden></div>
+      </div>
       <video id="video" playsinline muted autoplay></video>
       <div class="flash" id="flash"></div>
       <div class="badge" id="badge">원본</div>
@@ -41,6 +54,9 @@
       </button>
     </section>
   </main>
+
+  <div class="screen-flash" id="screenFlash"></div>
+  <div class="toast" id="toast" role="status"></div>
 
   <div class="review" id="review" hidden>
     <img id="reviewImg" alt="찍은 사진">

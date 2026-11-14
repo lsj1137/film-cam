@@ -30,21 +30,69 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* 뷰파인더 */
+/* 상단 도구 */
+.topbar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6px 24px;
+}
+
+.top-btn {
+  min-width: 44px;
+  height: 36px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--muted);
+}
+.top-btn.ratio { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: var(--text); }
+.top-btn[aria-pressed="true"] { color: var(--accent); }
+.top-btn .slash { display: inline; }
+.top-btn[aria-pressed="true"] .slash { display: none; }
+.top-btn.unavailable { opacity: 0.35; }
+
+/* 뷰파인더: 사진 비율대로 가운데에 놓는다 */
 .viewfinder {
   position: relative;
   flex: 1;
   min-height: 0;
   overflow: hidden;
   touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+.frame {
+  position: relative;
+  aspect-ratio: var(--ar, 0.75);
+  width: min(100cqw, calc(100cqh * var(--ar, 0.75)));
 }
 
 #view {
   width: 100%;
   height: 100%;
-  object-fit: contain;
   display: block;
 }
+
+/* 3×3 격자 (화면에만, 사진에는 안 찍힘) */
+.grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.grid::before,
+.grid::after {
+  content: "";
+  position: absolute;
+  border: 0 solid rgba(255, 248, 236, 0.4);
+}
+.grid::before { top: 0; bottom: 0; left: 33.333%; width: 33.333%; border-width: 0 1px; }
+.grid::after { left: 0; right: 0; top: 33.333%; height: 33.333%; border-width: 1px 0; }
 
 /* 비디오는 화면에 안 보이게 두되 iOS가 프레임을 계속 디코딩하도록 DOM에는 남겨 둔다 */
 #video {
@@ -114,6 +162,37 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .pill.primary { background: var(--accent); border-color: var(--accent); color: #1a120a; font-weight: 600; }
 
 [hidden] { display: none !important; }
+
+/* 전면 카메라 플래시: 화면 전체를 하얗게 */
+.screen-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #fffaf0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.screen-flash.on { opacity: 1; transition: none; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 190px);
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: calc(100% - 48px);
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(40, 34, 30, 0.95);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.toast.on { opacity: 1; }
 
 /* 필름 선택 */
 .presets {

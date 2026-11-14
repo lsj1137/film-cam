@@ -102,12 +102,16 @@ const VERT = `
 attribute vec2 aPos;
 uniform float uFlipY;
 uniform float uMirror;
-varying vec2 vUv;
+uniform vec2 uCropOffset;
+uniform vec2 uCropScale;
+varying vec2 vUv;   // 원본에서 읽을 위치
+varying vec2 vOut;  // 결과 사진 안에서의 위치 (0~1, 왼쪽 위가 0)
 void main() {
   vec2 uv = aPos * 0.5 + 0.5;
   if (uFlipY > 0.5) uv.y = 1.0 - uv.y;
+  vOut = uv;
   if (uMirror > 0.5) uv.x = 1.0 - uv.x;
-  vUv = uv;
+  vUv = uCropOffset + uv * uCropScale;
   gl_Position = vec4(aPos, 0.0, 1.0);
 }`;
 
@@ -131,6 +135,7 @@ void main() {
 const MAIN_FRAG = `
 precision highp float;
 varying vec2 vUv;
+varying vec2 vOut;
 uniform sampler2D uSrc;
 uniform sampler2D uBlur;
 uniform vec2 uBlurTexel;
@@ -204,7 +209,7 @@ void main() {
 
   // 플래시: 화면 가운데(살짝 위, 얼굴 위치)는 밝게 터지고 가장자리는 어둡게 떨어진다
   if (uFlash > 0.0) {
-    vec2 fp = (vUv - vec2(0.5, 0.42)) * vec2(uAspect, 1.0);
+    vec2 fp = (vOut - vec2(0.5, 0.42)) * vec2(uAspect, 1.0);
     float fd = length(fp) / length(vec2(uAspect, 1.0) * 0.5);
     float fl = 1.0 - smoothstep(0.0, 0.9, fd);
     lin *= mix(1.0, 0.3 + 2.0 * fl * fl, uFlash);
@@ -230,7 +235,7 @@ void main() {
   c = uLift + (uWhite - uLift) * clamp(c, 0.0, 1.0);
 
   // 비네팅
-  vec2 v = vUv - 0.5;
+  vec2 v = vOut - 0.5;
   c *= 1.0 - uVignette * pow(clamp(length(v) * 1.35, 0.0, 1.0), 2.5);
 
   // 그레인: 중간 톤에서 가장 잘 보이게
@@ -241,6 +246,14 @@ void main() {
 }`;
 
 const DOWNSCALE = 8;
+
+// 원본에서 가운데를 ratio 비율로 잘라낼 크기(원본 대비 비율). 가로로 든 원본이면 비율도 가로로 뒤집는다.
+function cropFor(w, h, ratio) {
+  if (!ratio) return { sx: 1, sy: 1 };
+  const target = w > h ? 1 / ratio : ratio;
+  const src = w / h;
+  return src > target ? { sx: target / src, sy: 1 } : { sx: 1, sy: src / target };
+}
 
 export class FilmRenderer {
   constructor(canvas) {
@@ -307,8 +320,8 @@ export class FilmRenderer {
   #resize(w, h) {
     if (w === this.w && h === this.h) return;
     const gl = this.gl;
-    this.w = this.canvas.width = w;
-    this.h = this.canvas.height = h;
+    this.w = w;
+    this.h = h;
     this.bw = Math.max(1, Math.ceil(w / DOWNSCALE));
     this.bh = Math.max(1, Math.ceil(h / DOWNSCALE));
     gl.bindTexture(gl.TEXTURE_2D, this.blurTex);
@@ -327,9 +340,15 @@ export class FilmRenderer {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, source);
   }
 
-  render(preset, { mirror = false, bypass = false, seed = Math.random() } = {}) {
+  // ratio: 세로 기준 가로/세로 비율 (3/4, 1, 9/16 …). null이면 원본 비율 그대로
+  render(preset, { mirror = false, bypass = false, seed = Math.random(), ratio = null } = {}) {
     const gl = this.gl;
     if (!this.w) return;
+    const crop = cropFor(this.w, this.h, ratio);
+    const ow = Math.round(this.w * crop.sx);
+    const oh = Math.round(this.h * crop.sy);
+    if (this.canvas.width !== ow) this.canvas.width = ow;
+    if (this.canvas.height !== oh) this.canvas.height = oh;
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
@@ -342,12 +361,14 @@ export class FilmRenderer {
     gl.uniform1i(this.down.loc.uSrc, 0);
     gl.uniform1f(this.down.loc.uFlipY, 0);
     gl.uniform1f(this.down.loc.uMirror, 0);
+    gl.uniform2f(this.down.loc.uCropOffset, 0, 0);
+    gl.uniform2f(this.down.loc.uCropScale, 1, 1);
     gl.uniform2f(this.down.loc.uStep, DOWNSCALE / 4 / this.w, DOWNSCALE / 4 / this.h);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
     // 2단계: 최종 색
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, this.w, this.h);
+    gl.viewport(0, 0, ow, oh);
     const { p, loc } = this.main;
     gl.useProgram(p);
     gl.activeTexture(gl.TEXTURE1);
@@ -356,6 +377,8 @@ export class FilmRenderer {
     gl.uniform1i(loc.uBlur, 1);
     gl.uniform1f(loc.uFlipY, 1);
     gl.uniform1f(loc.uMirror, mirror ? 1 : 0);
+    gl.uniform2f(loc.uCropOffset, (1 - crop.sx) / 2, (1 - crop.sy) / 2);
+    gl.uniform2f(loc.uCropScale, crop.sx, crop.sy);
     gl.uniform2f(loc.uBlurTexel, 1 / this.bw, 1 / this.bh);
     gl.uniform1f(loc.uBypass, bypass ? 1 : 0);
     gl.uniform1f(loc.uSeed, seed);
@@ -371,7 +394,7 @@ export class FilmRenderer {
     gl.uniform3fv(loc.uHighTint, preset.highTint);
     gl.uniform1f(loc.uVignette, preset.vignette);
     gl.uniform2f(loc.uSrcTexel, 1 / this.w, 1 / this.h);
-    gl.uniform1f(loc.uAspect, this.w / this.h);
+    gl.uniform1f(loc.uAspect, ow / oh);
     gl.uniform1f(loc.uSoft, preset.soft ?? 0);
     gl.uniform1f(loc.uContrast, preset.contrast ?? 0);
     gl.uniform1f(loc.uFlash, preset.flash ?? 0);
