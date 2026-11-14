@@ -4,6 +4,12 @@
   --text: #efe6d8;
   --muted: #9c9185;
   --accent: #e8a25a;
+  /* 상단 여백: 상태바(노치·다이내믹 아일랜드) 영역 + 여유. 그 영역은 흐리게 가려지므로 버튼이 닿지 않게 */
+  --safe-top: calc(env(safe-area-inset-top, 0px) + 10px);
+}
+/* 휴대폰: 상태바 높이를 0으로 알려 주는 경우(사파리 등)에도 최소한 이만큼은 비운다 */
+@media (pointer: coarse) {
+  :root { --safe-top: max(calc(env(safe-area-inset-top, 0px) + 10px), 54px); }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,7 +34,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -102,8 +108,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   z-index: 1;
 }
 .app.full .topbar {
-  margin: calc(-1 * env(safe-area-inset-top)) 0 0;
-  padding-top: calc(env(safe-area-inset-top) + 6px);
+  margin: calc(-1 * var(--safe-top)) 0 0;
+  padding-top: calc(var(--safe-top) + 6px);
   padding-bottom: 18px;
   background: linear-gradient(to bottom, rgba(10, 8, 7, 0.55), transparent);
 }
@@ -117,7 +123,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .app.full .controls { background: linear-gradient(to top, rgba(10, 8, 7, 0.5), rgba(10, 8, 7, 0.25)); }
 .app.full .chevron-btn { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
 .app.full .badge,
-.app.full .close-image { top: calc(env(safe-area-inset-top) + 64px); }
+.app.full .close-image { top: calc(var(--safe-top) + 64px); }
 
 /* 3×3 격자 (화면에만, 사진에는 안 찍힘) */
 .grid {
@@ -350,7 +356,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   display: flex;
   flex-direction: column;
   background: #000;
-  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  padding: var(--safe-top) 0 env(safe-area-inset-bottom);
 }
 
 .review-stage {
