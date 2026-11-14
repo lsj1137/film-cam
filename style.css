@@ -1,0 +1,198 @@
+:root {
+  --bg: #14110f;
+  --panel: #1d1916;
+  --text: #efe6d8;
+  --muted: #9c9185;
+  --accent: #e8a25a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 뷰파인더 */
+.viewfinder {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#view {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* 비디오는 화면에 안 보이게 두되 iOS가 프레임을 계속 디코딩하도록 DOM에는 남겨 둔다 */
+#video {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.flash {
+  position: absolute;
+  inset: 0;
+  background: #fff8ec;
+  opacity: 0;
+  pointer-events: none;
+}
+.flash.on { animation: flash 0.35s ease-out; }
+@keyframes flash { from { opacity: 0.85; } to { opacity: 0; } }
+
+.badge {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(20, 17, 15, 0.7);
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+.badge.on { opacity: 1; }
+
+.close-image {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(20, 17, 15, 0.7);
+  font-size: 16px;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.pill {
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid #3a332d;
+}
+.pill.primary { background: var(--accent); border-color: var(--accent); color: #1a120a; font-weight: 600; }
+
+[hidden] { display: none !important; }
+
+/* 필름 선택 */
+.presets {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 12px 6px;
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 58px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  color: var(--muted);
+  transition: color 0.15s, background 0.15s;
+}
+.preset .kanji { font-size: 20px; line-height: 1.2; }
+.preset .label { font-size: 11px; }
+.preset.active { color: var(--accent); background: var(--panel); }
+
+/* 촬영 버튼 영역 */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px 24px 20px;
+}
+
+.side-btn {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.shutter {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  border: 4px solid var(--text);
+  background: var(--text);
+  box-shadow: inset 0 0 0 4px var(--bg);
+  transition: transform 0.1s;
+}
+.shutter:active { transform: scale(0.92); }
+.shutter.image-mode { background: var(--accent); }
+
+/* 촬영 결과 확인 */
+.review {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 8, 7, 0.96);
+  padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 20px);
+}
+.review img {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  /* iOS에서 길게 눌러 "사진 앱에 저장"도 되도록 이미지 선택을 허용 */
+  -webkit-user-select: auto;
+  -webkit-touch-callout: default;
+}
+.review-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  padding-top: 18px;
+}
+.review-actions .pill { min-width: 120px; }
