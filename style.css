@@ -118,18 +118,24 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* 필름 선택 */
 .presets {
   display: flex;
-  justify-content: center;
-  gap: 10px;
+  gap: 6px;
   padding: 14px 12px 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.presets::-webkit-scrollbar { display: none; }
+/* 화면에 다 들어가면 가운데 정렬, 넘치면 가로 스크롤 */
+.preset:first-child { margin-left: auto; }
+.preset:last-child { margin-right: auto; }
 
 .preset {
+  flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 58px;
-  padding: 6px 10px;
+  min-width: 52px;
+  padding: 6px 8px;
   border-radius: 12px;
   color: var(--muted);
   transition: color 0.15s, background 0.15s;

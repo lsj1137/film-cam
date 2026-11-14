@@ -45,6 +45,57 @@ export const PRESETS = [
     highTint: [0.05, 0.02, -0.04],
     vignette: 0.22,
   },
+  {
+    // 밤거리·아케이드: 초록빛 짙은 검정, 주황으로 번지는 불빛, 굵은 그레인
+    id: 'yoru', kanji: '夜', label: '밤거리',
+    exposure: 0.25,
+    lift: [0.02, 0.045, 0.035],
+    white: 0.97,
+    haze: 0.08,
+    halation: 1.0,
+    grain: 0.075,
+    saturation: 0.92,
+    wb: [1.06, 1.0, 0.86],
+    shadowTint: [-0.01, 0.035, 0.02],
+    highTint: [0.05, 0.02, -0.04],
+    vignette: 0.3,
+    soft: 0.35,                    // 렌즈가 살짝 흐릿한 느낌
+    contrast: 0.35,                // 0이면 그대로, 클수록 대비 강하게
+  },
+  {
+    // 밤 인물: 차갑고 푸르스름하고 채도 낮은 뿌연 느낌
+    id: 'ao', kanji: '青', label: '푸른밤',
+    exposure: 0.55,
+    lift: [0.07, 0.09, 0.1],
+    white: 0.95,
+    haze: 0.2,
+    halation: 0.25,
+    grain: 0.06,
+    saturation: 0.7,
+    wb: [0.94, 1.0, 1.06],
+    shadowTint: [-0.02, 0.02, 0.035],
+    highTint: [0.0, 0.015, 0.02],
+    vignette: 0.15,
+    soft: 0.4,
+  },
+  {
+    // 일회용 카메라 플래시: 가운데는 밝게 터지고 배경은 어둡게 떨어짐
+    id: 'flash', kanji: '閃', label: '플래시',
+    exposure: 0.3,
+    lift: [0.03, 0.04, 0.035],
+    white: 0.97,
+    haze: 0.1,
+    halation: 0.4,
+    grain: 0.07,
+    saturation: 0.9,
+    wb: [1.06, 1.0, 0.9],
+    shadowTint: [-0.01, 0.03, 0.02],
+    highTint: [0.04, 0.02, -0.02],
+    vignette: 0.35,
+    soft: 0.3,
+    contrast: 0.25,
+    flash: 0.85,                   // 플래시 세기 (가운데 밝게, 가장자리 어둡게)
+  },
 ];
 
 const VERT = `
@@ -96,6 +147,11 @@ uniform vec3 uWb;
 uniform vec3 uShadowTint;
 uniform vec3 uHighTint;
 uniform float uVignette;
+uniform vec2 uSrcTexel;
+uniform float uAspect;
+uniform float uSoft;
+uniform float uContrast;
+uniform float uFlash;
 
 vec3 toLin(vec3 c) { return pow(c, vec3(2.2)); }
 vec3 toSrgb(vec3 c) { return pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2)); }
@@ -129,12 +185,30 @@ void main() {
   vec3 lin = toLin(src);
   vec3 blur = toLin(blurAt(vUv));
 
+  // 렌즈 흐림: 바로 옆 픽셀들과 섞어 선명도를 살짝 죽인다
+  if (uSoft > 0.0) {
+    vec2 t = uSrcTexel * 1.5;
+    vec3 s = toLin(texture2D(uSrc, vUv + vec2(t.x, t.y)).rgb)
+           + toLin(texture2D(uSrc, vUv + vec2(-t.x, t.y)).rgb)
+           + toLin(texture2D(uSrc, vUv + vec2(t.x, -t.y)).rgb)
+           + toLin(texture2D(uSrc, vUv + vec2(-t.x, -t.y)).rgb);
+    lin = mix(lin, s * 0.25, uSoft);
+  }
+
   // 뿌연 확산광
   lin = mix(lin, blur, uHaze);
 
   // 할레이션: 밝은 곳 주변이 붉게 번짐
   float bl = dot(blur, vec3(0.2126, 0.7152, 0.0722));
   lin += smoothstep(0.35, 1.0, bl) * vec3(1.0, 0.38, 0.14) * uHalation * 0.6;
+
+  // 플래시: 화면 가운데(살짝 위, 얼굴 위치)는 밝게 터지고 가장자리는 어둡게 떨어진다
+  if (uFlash > 0.0) {
+    vec2 fp = (vUv - vec2(0.5, 0.42)) * vec2(uAspect, 1.0);
+    float fd = length(fp) / length(vec2(uAspect, 1.0) * 0.5);
+    float fl = 1.0 - smoothstep(0.0, 0.9, fd);
+    lin *= mix(1.0, 0.3 + 2.0 * fl * fl, uFlash);
+  }
 
   lin *= exp2(uExposure) * uWb;
   // 0.75: 필름 곡선이 중간 톤을 끌어올리는 만큼 미리 낮춰 둔다 (노출 0일 때 원본과 비슷한 밝기)
@@ -147,6 +221,10 @@ void main() {
   // 그림자/밝은 부분 색조
   c += uShadowTint * (1.0 - smoothstep(0.0, 0.55, l));
   c += uHighTint * smoothstep(0.45, 1.0, l);
+
+  // 대비 (S자 곡선)
+  c = clamp(c, 0.0, 1.0);
+  c = mix(c, c * c * (3.0 - 2.0 * c), uContrast);
 
   // 검은 부분 띄우기 + 흰색 상한 → 탁하고 부드러운 대비
   c = uLift + (uWhite - uLift) * clamp(c, 0.0, 1.0);
@@ -292,6 +370,11 @@ export class FilmRenderer {
     gl.uniform3fv(loc.uShadowTint, preset.shadowTint);
     gl.uniform3fv(loc.uHighTint, preset.highTint);
     gl.uniform1f(loc.uVignette, preset.vignette);
+    gl.uniform2f(loc.uSrcTexel, 1 / this.w, 1 / this.h);
+    gl.uniform1f(loc.uAspect, this.w / this.h);
+    gl.uniform1f(loc.uSoft, preset.soft ?? 0);
+    gl.uniform1f(loc.uContrast, preset.contrast ?? 0);
+    gl.uniform1f(loc.uFlash, preset.flash ?? 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
