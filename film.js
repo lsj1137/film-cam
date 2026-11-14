@@ -4,7 +4,7 @@
 
 export const PRESETS = [
   {
-    id: 'natsu', label: '여름',
+    id: 'natsu', label: '여름', desc: '따뜻하고 뿌연 낮',
     exposure: 0.6,                 // EV, 일본 필름 감성의 핵심인 살짝 과노출
     lift: [0.075, 0.072, 0.062],   // 검은 부분을 이 색까지 띄움
     white: 0.965,                  // 가장 밝은 부분 상한
@@ -18,7 +18,7 @@ export const PRESETS = [
     vignette: 0.18,
   },
   {
-    id: 'kumori', label: '흐림',
+    id: 'kumori', label: '흐림', desc: '차분하고 초록빛 도는',
     exposure: 0.5,
     lift: [0.1, 0.106, 0.1],
     white: 0.94,
@@ -32,7 +32,7 @@ export const PRESETS = [
     vignette: 0.12,
   },
   {
-    id: 'yuugure', label: '노을',
+    id: 'yuugure', label: '노을', desc: '진한 주황빛',
     exposure: 0.35,
     lift: [0.08, 0.062, 0.052],
     white: 0.97,
@@ -47,7 +47,7 @@ export const PRESETS = [
   },
   {
     // 밤거리·아케이드: 초록빛 짙은 검정, 주황으로 번지는 불빛, 굵은 그레인
-    id: 'yoru', label: '밤거리',
+    id: 'yoru', label: '밤거리', desc: '초록빛 밤, 번지는 불빛',
     exposure: 0.25,
     lift: [0.02, 0.045, 0.035],
     white: 0.97,
@@ -64,7 +64,7 @@ export const PRESETS = [
   },
   {
     // 밤 인물: 차갑고 푸르스름하고 채도 낮은 뿌연 느낌
-    id: 'ao', label: '푸른밤',
+    id: 'ao', label: '푸른밤', desc: '차갑고 뿌연 밤',
     exposure: 0.55,
     lift: [0.07, 0.09, 0.1],
     white: 0.95,
@@ -80,7 +80,7 @@ export const PRESETS = [
   },
   {
     // 일회용 카메라 플래시: 가운데는 밝게 터지고 배경은 어둡게 떨어짐
-    id: 'flash', label: '플래시',
+    id: 'flash', label: '플래시', desc: '가운데가 터지는 일회용 플래시',
     exposure: 0.3,
     lift: [0.03, 0.04, 0.035],
     white: 0.97,
@@ -341,7 +341,8 @@ export class FilmRenderer {
   }
 
   // ratio: 세로 기준 가로/세로 비율 (3/4, 1, 9/16 …). null이면 원본 비율 그대로
-  render(preset, { mirror = false, bypass = false, seed = Math.random(), ratio = null } = {}) {
+  // zoom: 디지털 줌 배율 (가운데를 더 잘라 확대, 결과 사진 크기는 그대로)
+  render(preset, { mirror = false, bypass = false, seed = Math.random(), ratio = null, zoom = 1 } = {}) {
     const gl = this.gl;
     if (!this.w) return;
     const crop = cropFor(this.w, this.h, ratio);
@@ -377,8 +378,10 @@ export class FilmRenderer {
     gl.uniform1i(loc.uBlur, 1);
     gl.uniform1f(loc.uFlipY, 1);
     gl.uniform1f(loc.uMirror, mirror ? 1 : 0);
-    gl.uniform2f(loc.uCropOffset, (1 - crop.sx) / 2, (1 - crop.sy) / 2);
-    gl.uniform2f(loc.uCropScale, crop.sx, crop.sy);
+    const sx = crop.sx / zoom;
+    const sy = crop.sy / zoom;
+    gl.uniform2f(loc.uCropOffset, (1 - sx) / 2, (1 - sy) / 2);
+    gl.uniform2f(loc.uCropScale, sx, sy);
     gl.uniform2f(loc.uBlurTexel, 1 / this.bw, 1 / this.bh);
     gl.uniform1f(loc.uBypass, bypass ? 1 : 0);
     gl.uniform1f(loc.uSeed, seed);

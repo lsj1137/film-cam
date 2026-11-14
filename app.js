@@ -40,26 +40,45 @@ const state = {
   flash: false,
   torch: false,       // 후면 카메라 손전등을 켤 수 있는지 (기기·브라우저마다 다름)
   capturing: false,
+  zoom: 1,
+  nativeZoom: null,   // 카메라 자체 줌 범위 {min, max} (지원할 때만)
   imageCanvas: null,
   shotBlob: null,
   shotUrl: null,
 };
 
-// ---------- 필름 선택 ----------
-const presetNav = $('#presets');
+// ---------- 필름 선택 (위로 펼쳐지는 목록) ----------
+const filmBtn = $('#filmBtn');
+const filmMenu = $('#filmMenu');
 for (const p of PRESETS) {
-  const btn = document.createElement('button');
-  btn.className = 'preset';
-  btn.dataset.id = p.id;
-  btn.textContent = p.label;
-  btn.addEventListener('click', () => selectPreset(p));
-  presetNav.append(btn);
+  const li = document.createElement('li');
+  li.role = 'option';
+  li.dataset.id = p.id;
+  li.innerHTML = `<span class="name"></span><span class="desc"></span>`;
+  li.querySelector('.name').textContent = p.label;
+  li.querySelector('.desc').textContent = p.desc;
+  li.addEventListener('click', () => {
+    selectPreset(p);
+    setFilmMenu(false);
+  });
+  filmMenu.append(li);
 }
+
+function setFilmMenu(open) {
+  filmMenu.hidden = !open;
+  filmBtn.setAttribute('aria-expanded', String(open));
+}
+filmBtn.addEventListener('click', () => setFilmMenu(filmMenu.hidden));
+// 목록 밖을 누르면 닫기
+document.addEventListener('pointerdown', (e) => {
+  if (!filmMenu.hidden && !e.target.closest('.film-picker')) setFilmMenu(false);
+});
 
 function selectPreset(p) {
   state.preset = p;
   localStorage.setItem('preset', p.id);
-  for (const b of presetNav.children) b.classList.toggle('active', b.dataset.id === p.id);
+  $('#filmName').textContent = p.label;
+  for (const li of filmMenu.children) li.setAttribute('aria-selected', String(li.dataset.id === p.id));
   if (state.mode === 'image') drawImage();
 }
 selectPreset(state.preset);
@@ -98,8 +117,11 @@ async function startCamera() {
   const track = state.stream.getVideoTracks()[0];
   const settings = track.getSettings();
   state.mirror = (settings.facingMode ?? state.facing) === 'user';
-  state.torch = !state.mirror && !!track.getCapabilities?.().torch;
+  const caps = track.getCapabilities?.() ?? {};
+  state.torch = !state.mirror && !!caps.torch;
+  state.nativeZoom = caps.zoom && caps.zoom.max > caps.zoom.min ? caps.zoom : null;
   updateFlashBtn();
+  setZoom(1);
   video.srcObject = state.stream;
   await video.play().catch(() => {});
   placeholder.hidden = true;
@@ -109,7 +131,7 @@ function loop() {
   requestAnimationFrame(loop);
   if (state.mode !== 'camera' || !state.stream || video.readyState < 2 || !review.hidden || state.capturing) return;
   renderer.upload(video, video.videoWidth, video.videoHeight);
-  renderer.render(state.preset, { mirror: state.mirror, bypass: state.bypass, ratio: state.ratio.value });
+  renderer.render(state.preset, { mirror: state.mirror, bypass: state.bypass, ratio: state.ratio.value, zoom: digitalZoom() });
   syncFrame();
 }
 
@@ -173,7 +195,8 @@ function enterImageMode() {
   shutter.classList.add('image-mode');
   shutter.setAttribute('aria-label', '보정한 사진 저장');
   renderer.upload(state.imageCanvas, state.imageCanvas.width, state.imageCanvas.height);
-  drawImage();
+  state.nativeZoom = null;
+  setZoom(1);
 }
 
 function exitImageMode() {
@@ -186,13 +209,46 @@ function exitImageMode() {
 }
 
 function drawImage() {
-  renderer.render(state.preset, { bypass: state.bypass, seed: 0.5, ratio: state.ratio.value });
+  renderer.render(state.preset, { bypass: state.bypass, seed: 0.5, ratio: state.ratio.value, zoom: digitalZoom() });
   syncFrame();
 }
 
 closeImage.addEventListener('click', exitImageMode);
 
-// ---------- 길게 눌러 원본과 비교 ----------
+// ---------- 줌 ----------
+// 카메라가 줌을 지원하면 카메라 자체 줌(화질 좋음), 아니면 가운데를 잘라 확대하는 디지털 줌
+const MAX_DIGITAL_ZOOM = 5;
+const zoomBtn = $('#zoomBtn');
+const maxZoom = () => (state.nativeZoom ? Math.min(state.nativeZoom.max / state.nativeZoom.min, 10) : MAX_DIGITAL_ZOOM);
+const digitalZoom = () => (state.nativeZoom ? 1 : state.zoom);
+
+function setZoom(z) {
+  z = Math.min(maxZoom(), Math.max(1, z));
+  state.zoom = z;
+  zoomBtn.textContent = `${Number(z.toFixed(1))}×`;
+  zoomBtn.classList.toggle('zoomed', z > 1.05);
+  if (state.nativeZoom) applyNativeZoom(state.nativeZoom.min * z);
+  else if (state.mode === 'image') drawImage();
+}
+
+// 핀치 중에는 값이 계속 바뀌므로 카메라에는 한 번에 하나씩만 보낸다
+let zoomBusy = false;
+let zoomWanted = null;
+async function applyNativeZoom(value) {
+  zoomWanted = value;
+  if (zoomBusy) return;
+  zoomBusy = true;
+  while (zoomWanted !== null) {
+    const v = zoomWanted;
+    zoomWanted = null;
+    await state.stream?.getVideoTracks()[0].applyConstraints({ advanced: [{ zoom: v }] }).catch(() => {});
+  }
+  zoomBusy = false;
+}
+
+zoomBtn.addEventListener('click', () => setZoom(state.zoom > 1.05 ? 1 : 2));
+
+// ---------- 화면 터치: 두 손가락은 줌, 한 손가락 길게 누르면 원본 비교 ----------
 const viewfinder = $('#viewfinder');
 function setBypass(on) {
   if (state.bypass === on) return;
@@ -200,12 +256,49 @@ function setBypass(on) {
   badge.classList.toggle('on', on);
   if (state.mode === 'image') drawImage();
 }
+
+const pointers = new Map();
+let pinch = null;
+let holdTimer = 0;
+const pinchDistance = () => {
+  const [a, b] = [...pointers.values()];
+  return Math.hypot(a.x - b.x, a.y - b.y);
+};
+
 viewfinder.addEventListener('pointerdown', (e) => {
-  if (e.target === canvas) setBypass(true);
+  if (!e.target.closest('#frame')) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
+  if (pointers.size === 1) {
+    holdTimer = setTimeout(() => setBypass(true), 250);
+  } else if (pointers.size === 2) {
+    clearTimeout(holdTimer);
+    setBypass(false);
+    pinch = { distance: pinchDistance(), zoom: state.zoom };
+  }
 });
-for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
-  viewfinder.addEventListener(ev, () => setBypass(false));
+
+viewfinder.addEventListener('pointermove', (e) => {
+  const p = pointers.get(e.pointerId);
+  if (!p) return;
+  p.x = e.clientX;
+  p.y = e.clientY;
+  if (pinch && pointers.size >= 2) setZoom(pinch.zoom * pinchDistance() / pinch.distance);
+  else if (Math.hypot(p.x - p.x0, p.y - p.y0) > 10) clearTimeout(holdTimer);
+});
+
+function endPointer(e) {
+  if (!pointers.delete(e.pointerId)) return;
+  clearTimeout(holdTimer);
+  if (pointers.size < 2) pinch = null;
+  if (pointers.size === 0) setBypass(false);
 }
+for (const ev of ['pointerup', 'pointercancel']) viewfinder.addEventListener(ev, endPointer);
+
+// PC: 마우스 휠로 줌
+viewfinder.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  setZoom(state.zoom * Math.exp(-e.deltaY * 0.002));
+}, { passive: false });
 
 // ---------- 촬영 · 저장 ----------
 shutter.addEventListener('click', async () => {
@@ -213,7 +306,7 @@ shutter.addEventListener('click', async () => {
   if (state.mode === 'camera' && (!state.stream || video.readyState < 2)) return;
   state.capturing = true;
   try {
-    const opts = { ratio: state.ratio.value };
+    const opts = { ratio: state.ratio.value, zoom: digitalZoom() };
     if (state.mode === 'camera') {
       const lightOff = state.flash && canFlash() ? await lightOn() : null;
       const flash = $('#flash');

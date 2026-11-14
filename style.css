@@ -88,7 +88,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   z-index: 0;
 }
 .app.full .topbar,
-.app.full .presets,
+.app.full .picker-row,
 .app.full .controls {
   position: relative;
   z-index: 1;
@@ -101,16 +101,15 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .app.full .top-btn { color: var(--text); filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
 .app.full .top-btn[aria-pressed="true"] { color: var(--accent); }
-.app.full .presets { margin-top: auto; padding-top: 28px; }
-.app.full .preset { background: rgba(20, 17, 15, 0.45); color: var(--text); }
-.app.full .preset.active { background: rgba(20, 17, 15, 0.8); color: var(--accent); }
+.app.full .picker-row { margin-top: auto; padding-top: 28px; }
+.app.full .film-btn,
+.app.full .zoom-btn { background: rgba(20, 17, 15, 0.6); }
 .app.full .controls {
   margin-bottom: calc(-1 * env(safe-area-inset-bottom));
   padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
 }
-.app.full .presets,
 .app.full .controls { background: linear-gradient(to top, rgba(10, 8, 7, 0.5), rgba(10, 8, 7, 0.25)); }
-.app.full .presets { background: linear-gradient(to top, rgba(10, 8, 7, 0.25), transparent); }
+.app.full .picker-row { background: linear-gradient(to top, rgba(10, 8, 7, 0.25), transparent); }
 .app.full .badge,
 .app.full .close-image { top: calc(env(safe-area-inset-top) + 64px); }
 
@@ -229,29 +228,75 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .toast.on { opacity: 1; }
 
-/* 필름 선택 */
-.presets {
+/* 줌 + 필름 선택 줄 */
+.picker-row {
   display: flex;
-  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
   padding: 14px 12px 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
-.presets::-webkit-scrollbar { display: none; }
-/* 화면에 다 들어가면 가운데 정렬, 넘치면 가로 스크롤 */
-.preset:first-child { margin-left: auto; }
-.preset:last-child { margin-right: auto; }
 
-.preset {
-  flex: none;
-  padding: 8px 10px;
+.zoom-btn {
+  min-width: 44px;
+  height: 36px;
+  padding: 0 10px;
   border-radius: 999px;
+  background: var(--panel);
   font-size: 13px;
-  color: var(--muted);
-  white-space: nowrap;
-  transition: color 0.15s, background 0.15s;
+  font-weight: 600;
 }
-.preset.active { color: var(--accent); background: var(--panel); }
+.zoom-btn.zoomed { color: var(--accent); }
+
+/* 필름 선택: 누르면 위로 펼쳐지는 목록 */
+.film-picker { position: relative; }
+
+.film-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+.film-btn svg { transition: transform 0.15s; }
+.film-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+.film-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  min-width: 220px;
+  padding: 6px;
+  list-style: none;
+  border-radius: 16px;
+  background: rgba(29, 25, 22, 0.97);
+  border: 1px solid #3a332d;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: menu-up 0.16s ease-out;
+}
+@keyframes menu-up { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+.film-menu li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.film-menu li:active { background: #2a2420; }
+.film-menu .name { font-size: 15px; white-space: nowrap; flex: none; }
+.film-menu .desc { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.film-menu li[aria-selected="true"] { background: #2a2420; }
+.film-menu li[aria-selected="true"] .name { color: var(--accent); font-weight: 600; }
 
 /* 촬영 버튼 영역 */
 .controls {

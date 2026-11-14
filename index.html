@@ -41,7 +41,16 @@
       </div>
     </section>
 
-    <nav class="presets" id="presets"></nav>
+    <div class="picker-row">
+      <button class="zoom-btn" id="zoomBtn" aria-label="줌">1×</button>
+      <div class="film-picker">
+        <button class="film-btn" id="filmBtn" aria-haspopup="listbox" aria-expanded="false">
+          <span id="filmName">여름</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
+        </button>
+        <ul class="film-menu" id="filmMenu" role="listbox" aria-label="필름 선택" hidden></ul>
+      </div>
+    </div>
 
     <section class="controls">
       <label class="side-btn" aria-label="사진 불러오기">
