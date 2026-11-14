@@ -7,6 +7,7 @@
 - 화면·촬영·저장: `app.js`
 - 날짜 스탬프·정보 프레임: `stamp.js`
 - 저장 파일 촬영일 EXIF: `exif.js`
+- 앱 안 앨범 (폰 안 IndexedDB, 최근 60장): `album.js`
 
 ## 로컬 실행
 

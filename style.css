@@ -267,27 +267,32 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .chevron-btn svg { transition: transform 0.2s; }
 .film-drawer.open .chevron-btn svg { transform: rotate(180deg); }
 
-.film-carousel {
+/* 쉐브론 위로 떠오르는 판: 강도 + 필름 캐러셀 */
+.film-panel {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 100%;
-  display: flex;
-  gap: 24px;
-  padding: 14px 0 10px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
   opacity: 0;
   transform: translateY(8px);
   pointer-events: none;
   transition: opacity 0.2s, transform 0.2s;
 }
+.film-drawer.open .film-panel { opacity: 1; transform: none; pointer-events: auto; }
+
+.film-carousel {
+  position: relative;
+  display: flex;
+  gap: 24px;
+  padding: 10px 0 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
 .film-carousel::-webkit-scrollbar { display: none; }
 /* 양 끝 여백: 첫/마지막 필름도 가운데까지 올 수 있게 */
 .film-carousel::before,
 .film-carousel::after { content: ""; flex: 0 0 calc(50% - 24px); }
-.film-drawer.open .film-carousel { opacity: 1; transform: none; pointer-events: auto; }
 
 .film-item {
   flex: none;
@@ -539,3 +544,126 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .sheet-group button:active,
 .sheet-cancel:active { background: rgba(255, 255, 255, 0.08); }
 .sheet-cancel { font-weight: 600; }
+
+/* 필름 강도 슬라이더 (찍기 전: 필름 판 안, 찍은 뒤: 결과 화면) */
+.strength-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(78%, 320px);
+  margin: 0 auto;
+  font-size: 12px;
+  color: rgba(239, 230, 216, 0.75);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.strength-value { width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+.strength-row input {
+  flex: 1;
+  height: 28px;
+  margin: 0;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.strength-row input::-webkit-slider-runnable-track { height: 2px; border-radius: 1px; background: rgba(239, 230, 216, 0.35); }
+.strength-row input::-moz-range-track { height: 2px; border-radius: 1px; background: rgba(239, 230, 216, 0.35); }
+.strength-row input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.strength-row input::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: var(--accent); }
+.review-strength { padding-top: 12px; }
+
+/* 고화질 */
+.top-btn.hq-btn { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: var(--muted); }
+.top-btn.hq-btn[aria-pressed="true"] { color: var(--accent); }
+
+/* 밝기: 오른쪽 세로선 위의 해 */
+.exposure {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 24px;
+  height: 160px;
+  margin-top: -80px;
+  color: #ffd27a;
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+.exposure.on { opacity: 1; }
+.exposure-line { position: absolute; left: 11px; top: 0; bottom: 0; width: 2px; background: rgba(255, 210, 122, 0.55); }
+.exposure-sun {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(20, 17, 15, 0.55);
+  transform: translateY(var(--sun-y, 0px));
+}
+.ev-pill {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(20, 17, 15, 0.65);
+  color: #ffd27a;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.app.full .ev-pill { top: calc(var(--safe-top) + 64px); }
+
+/* 왼쪽 아래: 최근 사진 썸네일 */
+.thumb-btn { overflow: hidden; padding: 0; border-radius: 10px; }
+.thumb-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* 앱 안 앨범 */
+.album {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  padding: var(--safe-top) 0 env(safe-area-inset-bottom);
+}
+.album-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px 8px;
+}
+.album-top .icon-btn { cursor: pointer; }
+.album-count { font-size: 13px; color: rgba(235, 235, 245, 0.6); }
+.album-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: min-content;
+  gap: 2px;
+}
+.album-cell { aspect-ratio: 1; padding: 0; overflow: hidden; background: #1c1c1e; }
+.album-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.album-empty { margin: auto; color: rgba(235, 235, 245, 0.5); font-size: 14px; }
+
+/* 결과 화면 위 줄: 왼쪽 삭제(앨범에서 열었을 때), 오른쪽 비교선 */
+.review-top { justify-content: space-between; }
+#compareBtn { margin-left: auto; }

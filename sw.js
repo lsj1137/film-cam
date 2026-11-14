@@ -2,7 +2,7 @@
 // __BUILD__ 은 배포 때 커밋 해시로 바뀐다 → 배포마다 이 파일이 달라져서 설치된 앱이 새 버전을 알아챔
 const CACHE = 'filmcam-__BUILD__';
 const ASSETS = [
-  './', './index.html', './style.css', './app.js', './film.js', './stamp.js', './exif.js', './manifest.webmanifest',
+  './', './index.html', './style.css', './app.js', './film.js', './stamp.js', './exif.js', './album.js', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
 ];
 

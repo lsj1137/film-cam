@@ -157,6 +157,8 @@ uniform float uAspect;
 uniform float uSoft;
 uniform float uContrast;
 uniform float uFlash;
+uniform float uStrength; // 필름 효과 강도 0~1
+uniform float uUserEV;   // 사용자가 조절한 밝기 (EV)
 
 vec3 toLin(vec3 c) { return pow(c, vec3(2.2)); }
 vec3 toSrgb(vec3 c) { return pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2)); }
@@ -184,11 +186,13 @@ vec3 filmCurve(vec3 x) {
 }
 
 void main() {
+  float ev = exp2(uUserEV);
   vec3 src = texture2D(uSrc, vUv).rgb;
-  if (uBypass > 0.5) { gl_FragColor = vec4(src, 1.0); return; }
+  vec3 plain = toSrgb(toLin(src) * ev); // 밝기만 반영한 원본
+  if (uBypass > 0.5) { gl_FragColor = vec4(plain, 1.0); return; }
 
   vec3 lin = toLin(src);
-  vec3 blur = toLin(blurAt(vUv));
+  vec3 blur = toLin(blurAt(vUv)) * ev;
 
   // 렌즈 흐림: 바로 옆 픽셀들과 섞어 선명도를 살짝 죽인다
   if (uSoft > 0.0) {
@@ -199,6 +203,7 @@ void main() {
            + toLin(texture2D(uSrc, vUv + vec2(-t.x, -t.y)).rgb);
     lin = mix(lin, s * 0.25, uSoft);
   }
+  lin *= ev;
 
   // 뿌연 확산광
   lin = mix(lin, blur, uHaze);
@@ -242,7 +247,8 @@ void main() {
   float n = hash(gl_FragCoord.xy + uSeed * 97.0) - 0.5;
   c += n * uGrain * (1.0 - abs(l - 0.5) * 1.2);
 
-  gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+  // 강도: 밝기만 반영한 원본과 필름 결과를 섞는다
+  gl_FragColor = vec4(clamp(mix(plain, c, uStrength), 0.0, 1.0), 1.0);
 }`;
 
 const DOWNSCALE = 8;
@@ -342,12 +348,18 @@ export class FilmRenderer {
 
   // ratio: 세로 기준 가로/세로 비율 (3/4, 1, 9/16 …). null이면 원본 비율 그대로
   // zoom: 디지털 줌 배율 (가운데를 더 잘라 확대, 결과 사진 크기는 그대로)
-  render(preset, { mirror = false, bypass = false, seed = Math.random(), ratio = null, zoom = 1 } = {}) {
+  // strength: 필름 강도 0~1, ev: 밝기(EV), maxSide: 미리보기용으로 결과 크기를 이 이하로 줄임 (0이면 원본 크기)
+  render(preset, { mirror = false, bypass = false, seed = Math.random(), ratio = null, zoom = 1, strength = 1, ev = 0, maxSide = 0 } = {}) {
     const gl = this.gl;
     if (!this.w) return;
     const crop = cropFor(this.w, this.h, ratio);
-    const ow = Math.round(this.w * crop.sx);
-    const oh = Math.round(this.h * crop.sy);
+    let ow = Math.round(this.w * crop.sx);
+    let oh = Math.round(this.h * crop.sy);
+    if (maxSide && Math.max(ow, oh) > maxSide) {
+      const k = maxSide / Math.max(ow, oh);
+      ow = Math.round(ow * k);
+      oh = Math.round(oh * k);
+    }
     if (this.canvas.width !== ow) this.canvas.width = ow;
     if (this.canvas.height !== oh) this.canvas.height = oh;
     gl.enableVertexAttribArray(0);
@@ -401,6 +413,8 @@ export class FilmRenderer {
     gl.uniform1f(loc.uSoft, preset.soft ?? 0);
     gl.uniform1f(loc.uContrast, preset.contrast ?? 0);
     gl.uniform1f(loc.uFlash, preset.flash ?? 0);
+    gl.uniform1f(loc.uStrength, strength);
+    gl.uniform1f(loc.uUserEV, ev);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
