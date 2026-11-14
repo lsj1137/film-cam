@@ -336,6 +336,7 @@ shutter.addEventListener('click', async () => {
   if (state.capturing) return;
   if (state.mode === 'camera' && (!state.stream || video.readyState < 2)) return;
   state.capturing = true;
+  shutter.classList.add('busy');
   try {
     const opts = { ratio: state.ratio.value, zoom: digitalZoom() };
     if (state.mode === 'camera') {
@@ -358,6 +359,7 @@ shutter.addEventListener('click', async () => {
     if (film && original) showShot(film, original);
   } finally {
     state.capturing = false;
+    shutter.classList.remove('busy');
   }
 });
 
