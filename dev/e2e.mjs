@@ -307,7 +307,8 @@ await test('찍기 전 필름 강도 0% → 필름 사진이 원본과 같음, �
 
 await test('밝기: 위로 밀면 밝아지고, 값 표시를 누르면 0으로', `
   const c = T.q('#view'), g = c.getContext('webgl');
-  const lum = () => { const px = new Uint8Array(4); g.readPixels(c.width >> 1, c.height >> 1, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); return px[0] + px[1] + px[2]; };
+  // 한 점은 이미 최대 밝기일 수 있어서, 화면 9×9 지점의 평균으로 비교
+  const lum = () => { let sum = 0; const px = new Uint8Array(4); for (let i = 1; i <= 9; i++) for (let j = 1; j <= 9; j++) { g.readPixels(Math.round(c.width * i / 10), Math.round(c.height * j / 10), 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); sum += px[0] + px[1] + px[2]; } return sum / 81; };
   await T.sleep(300); const before = lum();
   const ev = (t, y) => c.dispatchEvent(new PointerEvent(t, { pointerId: 11, clientX: 250, clientY: y, bubbles: true }));
   ev('pointerdown', 400); ev('pointermove', 385); ev('pointermove', 300); ev('pointermove', 225); ev('pointerup', 225);
