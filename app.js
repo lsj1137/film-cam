@@ -40,7 +40,7 @@ for (const p of PRESETS) {
   const btn = document.createElement('button');
   btn.className = 'preset';
   btn.dataset.id = p.id;
-  btn.innerHTML = `<span class="kanji">${p.kanji}</span><span class="label">${p.label}</span>`;
+  btn.textContent = p.label;
   btn.addEventListener('click', () => selectPreset(p));
   presetNav.append(btn);
 }

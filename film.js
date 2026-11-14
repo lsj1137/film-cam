@@ -4,7 +4,7 @@
 
 export const PRESETS = [
   {
-    id: 'natsu', kanji: '夏', label: '여름',
+    id: 'natsu', label: '여름',
     exposure: 0.6,                 // EV, 일본 필름 감성의 핵심인 살짝 과노출
     lift: [0.075, 0.072, 0.062],   // 검은 부분을 이 색까지 띄움
     white: 0.965,                  // 가장 밝은 부분 상한
@@ -18,7 +18,7 @@ export const PRESETS = [
     vignette: 0.18,
   },
   {
-    id: 'kumori', kanji: '曇', label: '흐림',
+    id: 'kumori', label: '흐림',
     exposure: 0.5,
     lift: [0.1, 0.106, 0.1],
     white: 0.94,
@@ -32,7 +32,7 @@ export const PRESETS = [
     vignette: 0.12,
   },
   {
-    id: 'yuugure', kanji: '夕', label: '노을',
+    id: 'yuugure', label: '노을',
     exposure: 0.35,
     lift: [0.08, 0.062, 0.052],
     white: 0.97,
@@ -47,7 +47,7 @@ export const PRESETS = [
   },
   {
     // 밤거리·아케이드: 초록빛 짙은 검정, 주황으로 번지는 불빛, 굵은 그레인
-    id: 'yoru', kanji: '夜', label: '밤거리',
+    id: 'yoru', label: '밤거리',
     exposure: 0.25,
     lift: [0.02, 0.045, 0.035],
     white: 0.97,
@@ -64,7 +64,7 @@ export const PRESETS = [
   },
   {
     // 밤 인물: 차갑고 푸르스름하고 채도 낮은 뿌연 느낌
-    id: 'ao', kanji: '青', label: '푸른밤',
+    id: 'ao', label: '푸른밤',
     exposure: 0.55,
     lift: [0.07, 0.09, 0.1],
     white: 0.95,
@@ -80,7 +80,7 @@ export const PRESETS = [
   },
   {
     // 일회용 카메라 플래시: 가운데는 밝게 터지고 배경은 어둡게 떨어짐
-    id: 'flash', kanji: '閃', label: '플래시',
+    id: 'flash', label: '플래시',
     exposure: 0.3,
     lift: [0.03, 0.04, 0.035],
     white: 0.97,
