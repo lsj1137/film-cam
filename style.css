@@ -423,13 +423,42 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .compare-tag.left { left: calc(var(--inset-x, 0px) + 12px); }
 .compare-tag.right { right: calc(var(--inset-x, 0px) + 12px); }
 
-/* 아이폰 촬영 후 화면처럼 글자만 있는 버튼 */
+/* 하단: 양옆 아이콘, 가운데 버튼은 양옆 크기와 상관없이 정중앙 */
 .review-bar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 16px 20px 18px;
+  padding: 12px 14px 14px;
 }
+.review-bar > :first-child { justify-self: start; }
+.review-bar > :last-child { justify-self: end; }
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.icon-btn.save { color: var(--accent); }
+
+/* 상단: 비교선 켜고 끄기 */
+.review-top {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 10px 0;
+}
+#compareBtn { color: rgba(235, 235, 245, 0.6); }
+#compareBtn .fill-half { fill: currentColor; opacity: 0; }
+#compareBtn[aria-pressed="true"] { color: #fff; }
+#compareBtn[aria-pressed="true"] .fill-half { opacity: 0.5; }
+
+/* 비교선을 끄면 필름 사진만 */
+.compare.solo { cursor: default; }
+.compare.solo #reviewImg { clip-path: none; }
+.compare.solo .compare-line,
+.compare.solo .compare-tag { display: none; }
 .text-btn { font-size: 17px; color: #fff; padding: 8px 4px; }
 .text-btn.strong { font-weight: 600; }
 .stamp-btn {

@@ -497,8 +497,19 @@ function dragCompare(e) {
   const r = compare.getBoundingClientRect();
   setComparePos((e.clientX - r.left) / r.width);
 }
+// 상단 토글: 비교선 켜고 끄기 (설정 기억)
+const compareBtn = $('#compareBtn');
+function applyCompareMode(on) {
+  compare.classList.toggle('solo', !on);
+  compareBtn.setAttribute('aria-pressed', String(on));
+  localStorage.setItem('compare', on ? 'on' : 'off');
+}
+compareBtn.addEventListener('click', () => applyCompareMode(compare.classList.contains('solo')));
+applyCompareMode(localStorage.getItem('compare') !== 'off');
+
 let comparing = false;
 compare.addEventListener('pointerdown', (e) => {
+  if (compare.classList.contains('solo')) return;
   comparing = true;
   try { compare.setPointerCapture(e.pointerId); } catch {}
   dragCompare(e);
