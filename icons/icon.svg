@@ -1,13 +1,57 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <radialGradient id="lens" cx="42%" cy="38%" r="65%">
-      <stop offset="0" stop-color="#f6d6a4"/>
-      <stop offset="0.55" stop-color="#e08a4c"/>
-      <stop offset="1" stop-color="#6b3a24"/>
+    <!-- 뿌옇고 따뜻한 필름 색: 위는 크림, 아래로 갈수록 주황 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7e6c9"/>
+      <stop offset="0.55" stop-color="#eaa96c"/>
+      <stop offset="1" stop-color="#c2653c"/>
+    </linearGradient>
+    <!-- 오른쪽 위에서 새어 들어오는 빛 -->
+    <radialGradient id="leak" cx="0.9" cy="0.08" r="0.7">
+      <stop offset="0" stop-color="#fff7e6" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#ffd9a8" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffd9a8" stop-opacity="0"/>
     </radialGradient>
+    <radialGradient id="glass" cx="0.38" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#6a5646"/>
+      <stop offset="0.55" stop-color="#241d19"/>
+      <stop offset="1" stop-color="#0d0a08"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2521"/>
+      <stop offset="1" stop-color="#171311"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#6b2f14" flood-opacity="0.35"/>
+    </filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.2  0 0 0 0 0.12  0 0 0 0 0.06  0 0 0 0.16 0"/>
+    </filter>
   </defs>
-  <rect width="512" height="512" fill="#14110f"/>
-  <circle cx="256" cy="256" r="150" fill="#efe6d8"/>
-  <circle cx="256" cy="256" r="118" fill="url(#lens)"/>
-  <circle cx="214" cy="212" r="26" fill="#fff6e6" opacity="0.7"/>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#leak)"/>
+
+  <g filter="url(#shadow)">
+    <!-- 윗면: 셔터 버튼, 뷰파인더 혹 -->
+    <rect x="322" y="150" width="56" height="22" rx="8" fill="#1d1916"/>
+    <rect x="138" y="158" width="92" height="40" rx="12" fill="#1d1916"/>
+    <!-- 몸체 -->
+    <rect x="92" y="184" width="328" height="196" rx="40" fill="url(#body)"/>
+    <!-- 뷰파인더 창 -->
+    <rect x="330" y="210" width="58" height="34" rx="9" fill="#4a3f37"/>
+    <rect x="338" y="216" width="22" height="22" rx="5" fill="#8f7b6a" opacity="0.6"/>
+    <!-- 주황 포인트 -->
+    <circle cx="132" cy="220" r="11" fill="#eaa96c"/>
+    <!-- 렌즈 -->
+    <circle cx="256" cy="284" r="84" fill="#efe4d2"/>
+    <circle cx="256" cy="284" r="70" fill="#2b2521"/>
+    <circle cx="256" cy="284" r="60" fill="url(#glass)"/>
+    <circle cx="232" cy="260" r="17" fill="#fff8ee" opacity="0.55"/>
+    <circle cx="281" cy="308" r="7" fill="#fff8ee" opacity="0.22"/>
+  </g>
+
+  <!-- 필름 그레인 -->
+  <rect width="512" height="512" filter="url(#grain)"/>
 </svg>

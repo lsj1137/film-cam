@@ -1,7 +1,7 @@
 {
-  "name": "필름캠",
-  "short_name": "필름캠",
-  "description": "일본 필름 카메라 감성 카메라",
+  "name": "Film Camera",
+  "short_name": "Film Camera",
+  "description": "A camera with a hazy, warm Japanese film look",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,8 +9,20 @@
   "background_color": "#14110f",
   "theme_color": "#14110f",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
   ]
 }

@@ -12,9 +12,9 @@ export async function withExif(blob, { date, description }) {
   const tiff = buildTiff(
     [
       ascii(0x010e, description),       // ImageDescription
-      ascii(0x010f, 'FilmCam'),         // Make
-      ascii(0x0110, 'FilmCam Web'),     // Model
-      ascii(0x0131, 'FilmCam'),         // Software
+      ascii(0x010f, 'Film Camera'),     // Make
+      ascii(0x0110, 'Film Camera Web'), // Model
+      ascii(0x0131, 'Film Camera'),     // Software
       ascii(0x0132, stamp),             // DateTime
       { tag: 0x8769, type: LONG, value: 0 }, // Exif IFD 위치 (아래에서 채움)
     ],

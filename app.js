@@ -462,8 +462,8 @@ async function buildReview(token) {
   // 캔버스가 너무 크거나 메모리가 모자라면 toBlob 이 null 을 준다
   if (!filmOut || !originalOut) throw new Error('toBlob failed');
   [filmOut, originalOut] = await Promise.all([
-    withExif(filmOut, { date: meta.date, description: `FilmCam ${meta.filmId}` }),
-    withExif(originalOut, { date: meta.date, description: 'FilmCam original' }),
+    withExif(filmOut, { date: meta.date, description: `Film Camera ${meta.filmId}` }),
+    withExif(originalOut, { date: meta.date, description: 'Film Camera original' }),
   ]);
   if (token !== reviewToken) return; // 그 사이 더 새로운 요청이 들어옴
 

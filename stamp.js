@@ -135,7 +135,7 @@ function drawFrame(c, bitmap, meta) {
   const pad2 = (n) => String(n).padStart(2, '0');
 
   ctx.textBaseline = 'alphabetic';
-  // 왼쪽: 제목(있으면) 또는 필름 이름, 아래에 작게 필름 이름·앱 이름
+  // 왼쪽: 제목(있으면) 또는 필름 이름, 아래에 작게 필름 이름·앱 이름(FILM CAMERA)
   const title = meta.title?.trim();
   ctx.textAlign = 'left';
   ctx.fillStyle = '#1d1b19';
@@ -143,7 +143,7 @@ function drawFrame(c, bitmap, meta) {
   ctx.fillStyle = '#8a847c';
   ctx.font = `500 ${base * 0.024}px ${FONT}`;
   ctx.letterSpacing = `${base * 0.004}px`;
-  ctx.fillText(title ? `${meta.film}  ·  FILMCAM` : 'FILMCAM', left, cy + base * 0.042);
+  ctx.fillText(title ? `${meta.film}  ·  FILM CAMERA` : 'FILM CAMERA', left, cy + base * 0.042);
   ctx.letterSpacing = '0px';
 
   // 오른쪽: 촬영 날짜, 아래에 시간 (줌했으면 배율도)
