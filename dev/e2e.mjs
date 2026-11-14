@@ -252,6 +252,25 @@ await test('카메라로 돌아가기 + 전면 화면 플래시 촬영', `
   return { front, white, open, whiteAfter: T.q('#screenFlash').classList.contains('on') };
 `, (v) => v.front && v.white && v.open && !v.whiteAfter);
 
+await test('결과 화면 보는 사이 카메라가 끊겨도, 돌아오면 다시 켜짐', `
+  T.q('#shutter').click(); await T.waitReview();
+  // 아이폰 기본 창(제목 입력·공유 시트)이 카메라를 끊은 상황을 흉내
+  const old = T.q('#video').srcObject.getVideoTracks()[0];
+  old.stop(); old.dispatchEvent(new Event('ended'));
+  await T.sleep(300);
+  T.q('#discardBtn').click(); await T.sleep(2500);
+  const track = T.q('#video').srcObject?.getVideoTracks()[0];
+  const t0 = T.q('#video').currentTime; await T.sleep(600);
+  return { newTrack: track && track !== old, live: track?.readyState, moving: T.q('#video').currentTime > t0 };
+`, (v) => v.newTrack && v.live === 'live' && v.moving);
+
+await test('카메라 화면에서 영상이 멈추면 저절로 복구', `
+  T.q('#video').pause();
+  const t0 = T.q('#video').currentTime;
+  await T.sleep(3500);
+  return { paused: T.q('#video').paused, moving: T.q('#video').currentTime > t0 };
+`, (v) => !v.paused && v.moving);
+
 await test('서비스 워커 등록 (오프라인·홈 화면 앱)', `
   const reg = await navigator.serviceWorker.getRegistration();
   return { registered: !!reg };

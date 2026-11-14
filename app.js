@@ -135,7 +135,14 @@ function stopCamera() {
   video.srcObject = null;
 }
 
-async function startCamera() {
+// 여러 곳(앱 복귀, 멈춤 감시, 결과 화면 닫기)에서 동시에 불러도 카메라 켜기는 한 번만 돈다
+let cameraStarting = null;
+function startCamera() {
+  cameraStarting ??= openCamera().finally(() => { cameraStarting = null; });
+  return cameraStarting;
+}
+
+async function openCamera() {
   stopCamera();
   if (!navigator.mediaDevices?.getUserMedia) {
     showPlaceholder('카메라는 https 주소에서만 쓸 수 있어요. 사진 불러오기는 지금도 쓸 수 있어요.', false);
@@ -154,6 +161,8 @@ async function startCamera() {
     return;
   }
   const track = state.stream.getVideoTracks()[0];
+  // 아이폰 기본 창(입력 창, 공유 시트)이나 전화 등으로 카메라가 끊기면 다시 켠다
+  track.addEventListener('ended', () => ensureCamera());
   const settings = track.getSettings();
   state.mirror = (settings.facingMode ?? state.facing) === 'user';
   const caps = track.getCapabilities?.() ?? {};
@@ -169,9 +178,43 @@ async function startCamera() {
 function loop() {
   requestAnimationFrame(loop);
   if (state.mode !== 'camera' || !state.stream || video.readyState < 2 || !review.hidden || state.capturing) return;
+  watchFreeze();
   renderer.upload(video, video.videoWidth, video.videoHeight);
   renderer.render(state.preset, { mirror: state.mirror, bypass: state.bypass, ratio: state.ratio.value, zoom: digitalZoom() });
   syncFrame();
+}
+
+// ---------- 카메라 멈춤 복구 ----------
+// 카메라 화면으로 돌아왔을 때: 카메라가 꺼졌으면 다시 켜고, 멈춰 있으면 다시 재생
+function ensureCamera() {
+  if (state.mode !== 'camera' || document.hidden || !review.hidden) return;
+  const track = state.stream?.getVideoTracks()[0];
+  if (!track || track.readyState === 'ended') startCamera();
+  else if (video.paused) video.play().catch(() => startCamera());
+}
+
+// 미리보기 영상이 1.5초 넘게 그대로면 멈춘 것으로 보고 복구한다
+let lastVideoTime = -1;
+let lastVideoChange = 0;
+let recovering = false;
+function watchFreeze() {
+  const now = performance.now();
+  if (video.currentTime !== lastVideoTime) {
+    lastVideoTime = video.currentTime;
+    lastVideoChange = now;
+    return;
+  }
+  if (recovering || now - lastVideoChange < 1500) return;
+  recovering = true;
+  (async () => {
+    const before = video.currentTime;
+    await video.play().catch(() => {});
+    await sleep(700);
+    if (video.currentTime === before && state.mode === 'camera' && review.hidden) await startCamera();
+  })().finally(() => {
+    recovering = false;
+    lastVideoChange = performance.now();
+  });
 }
 
 // 화면의 사진 틀을 실제 결과 사진 비율에 맞춘다 (격자도 이 틀 기준)
@@ -566,7 +609,7 @@ $('#saveBackdrop').addEventListener('click', () => setSaveSheet(false));
 function closeReview() {
   review.hidden = true;
   if (state.mode === 'image') drawImage();
-  reloadIfUpdated();
+  if (!reloadIfUpdated()) ensureCamera();
 }
 
 $('#discardBtn').addEventListener('click', closeReview);
