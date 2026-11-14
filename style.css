@@ -404,7 +404,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 .compare-tag {
   position: absolute;
-  top: 10px;
+  top: calc(var(--inset-y, 0px) + 10px);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -412,8 +412,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   pointer-events: none;
 }
-.compare-tag.left { left: 12px; }
-.compare-tag.right { right: 12px; }
+.compare-tag.left { left: calc(var(--inset-x, 0px) + 12px); }
+.compare-tag.right { right: calc(var(--inset-x, 0px) + 12px); }
 
 /* 아이폰 촬영 후 화면처럼 글자만 있는 버튼 */
 .review-bar {
@@ -424,6 +424,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .text-btn { font-size: 17px; color: #fff; padding: 8px 4px; }
 .text-btn.strong { font-weight: 600; }
+.stamp-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: rgba(235, 235, 245, 0.6);
+}
+.stamp-btn.on { color: var(--accent); }
 
 /* 저장 선택: 아이폰 액션 시트 */
 .sheet-layer { position: fixed; inset: 0; z-index: 12; }

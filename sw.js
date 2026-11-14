@@ -1,7 +1,7 @@
 // 네트워크 우선, 실패하면 캐시 (오프라인에서도 열리게)
-const CACHE = 'filmcam-v10';
+const CACHE = 'filmcam-v11';
 const ASSETS = [
-  './', './index.html', './style.css', './app.js', './film.js', './manifest.webmanifest',
+  './', './index.html', './style.css', './app.js', './film.js', './stamp.js', './exif.js', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
 ];
 

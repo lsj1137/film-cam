@@ -1,4 +1,6 @@
 import { FilmRenderer, PRESETS } from './film.js';
+import { STAMPS, compose, framePad } from './stamp.js';
+import { withExif } from './exif.js';
 
 const $ = (sel) => document.querySelector(sel);
 const canvas = $('#view');
@@ -40,6 +42,10 @@ const state = {
   flash: false,
   torch: false,       // 후면 카메라 손전등을 켤 수 있는지 (기기·브라우저마다 다름)
   capturing: false,
+  stamp: STAMPS.find((s) => s.id === localStorage.getItem('stamp')) ?? STAMPS[0],
+  imageDate: null,    // 불러온 사진의 날짜
+  shot: null,         // 찍은 사진 { film, original, meta }
+  out: null,          // 저장할 최종 파일 { film, original }
   zoom: 1,
   nativeZoom: null,   // 카메라 자체 줌 범위 {min, max} (지원할 때만)
   imageCanvas: null,
@@ -212,6 +218,7 @@ $('#fileInput').addEventListener('change', async (e) => {
   c.height = Math.round(img.naturalHeight * scale);
   c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
   state.imageCanvas = c;
+  state.imageDate = new Date(file.lastModified || Date.now());
   enterImageMode();
 });
 
@@ -356,7 +363,15 @@ shutter.addEventListener('click', async () => {
     const original = await renderer.toBlob();
     renderer.render(state.preset, opts);
     const film = await renderer.toBlob();
-    if (film && original) showShot(film, original);
+    const meta = {
+      date: state.mode === 'camera' ? new Date() : state.imageDate,
+      film: state.preset.label,
+      filmId: state.preset.id,
+      zoom: Number(state.zoom.toFixed(1)),
+      ratio: state.ratio.label,
+      camera: state.mode === 'camera' ? (state.mirror ? '전면' : '후면') : '',
+    };
+    if (film && original) await showShot(film, original, meta);
   } finally {
     state.capturing = false;
     shutter.classList.remove('busy');
@@ -366,20 +381,65 @@ shutter.addEventListener('click', async () => {
 const compare = $('#compare');
 const originalImg = $('#originalImg');
 
-function showShot(film, original) {
-  state.shotBlob = film;
-  state.originalBlob = original;
-  if (state.shotUrl) URL.revokeObjectURL(state.shotUrl);
-  if (state.originalUrl) URL.revokeObjectURL(state.originalUrl);
-  state.shotUrl = URL.createObjectURL(film);
-  state.originalUrl = URL.createObjectURL(original);
-  reviewImg.src = state.shotUrl;
-  originalImg.src = state.originalUrl;
-  compare.style.setProperty('--ar', canvas.width / canvas.height);
+async function showShot(film, original, meta) {
+  const [filmBmp, originalBmp] = await Promise.all([createImageBitmap(film), createImageBitmap(original)]);
+  state.shot = { film, original, filmBmp, originalBmp, meta };
+  await renderReview();
   setComparePos(0.5);
   setSaveSheet(false);
   review.hidden = false;
 }
+
+// 날짜·정보 표시를 적용한 최종 파일을 만들고 미리보기에 띄운다.
+// 저장 버튼을 누른 뒤에 만들면 아이폰 공유 시트가 막힐 수 있어서 미리 만들어 둔다.
+async function renderReview() {
+  const { film, original, filmBmp, originalBmp, meta } = state.shot;
+  const style = state.stamp.id;
+  const toBlob = (c) => new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92));
+  let filmOut = film;
+  let originalOut = original;
+  let ar = filmBmp.width / filmBmp.height;
+  let inset = ['0px', '0px'];
+  if (style !== 'none') {
+    const fc = compose(filmBmp, style, meta);
+    const oc = compose(originalBmp, style, meta);
+    [filmOut, originalOut] = await Promise.all([toBlob(fc), toBlob(oc)]);
+    ar = fc.width / fc.height;
+    if (style === 'frame') {
+      const pad = framePad(filmBmp.width, filmBmp.height);
+      inset = [`${(pad / fc.width) * 100}%`, `${(pad / fc.height) * 100}%`];
+    }
+  }
+  compare.style.setProperty('--inset-x', inset[0]);
+  compare.style.setProperty('--inset-y', inset[1]);
+  [filmOut, originalOut] = await Promise.all([
+    withExif(filmOut, { date: meta.date, description: `FilmCam ${meta.filmId}` }),
+    withExif(originalOut, { date: meta.date, description: 'FilmCam original' }),
+  ]);
+  state.out = { film: filmOut, original: originalOut };
+
+  if (state.shotUrl) URL.revokeObjectURL(state.shotUrl);
+  if (state.originalUrl) URL.revokeObjectURL(state.originalUrl);
+  state.shotUrl = URL.createObjectURL(filmOut);
+  state.originalUrl = URL.createObjectURL(originalOut);
+  reviewImg.src = state.shotUrl;
+  originalImg.src = state.originalUrl;
+  compare.style.setProperty('--ar', ar);
+}
+
+// 표시 없음 → 날짜 → 정보 프레임
+const stampBtn = $('#stampBtn');
+function applyStampLabel() {
+  $('#stampLabel').textContent = state.stamp.label;
+  stampBtn.classList.toggle('on', state.stamp.id !== 'none');
+}
+stampBtn.addEventListener('click', async () => {
+  state.stamp = STAMPS[(STAMPS.indexOf(state.stamp) + 1) % STAMPS.length];
+  localStorage.setItem('stamp', state.stamp.id);
+  applyStampLabel();
+  if (state.shot) await renderReview();
+});
+applyStampLabel();
 
 // 비교선: 사진 아무 데나 누르거나 끌면 그 위치로 선이 온다
 function setComparePos(t) {
@@ -419,8 +479,8 @@ $('#saveWithOriginal').addEventListener('click', () => save(true));
 
 async function save(withOriginal) {
   const stamp = timeStamp();
-  const files = [new File([state.shotBlob], `filmcam_${stamp}.jpg`, { type: 'image/jpeg' })];
-  if (withOriginal) files.push(new File([state.originalBlob], `filmcam_${stamp}_original.jpg`, { type: 'image/jpeg' }));
+  const files = [new File([state.out.film], `filmcam_${stamp}.jpg`, { type: 'image/jpeg' })];
+  if (withOriginal) files.push(new File([state.out.original], `filmcam_${stamp}_original.jpg`, { type: 'image/jpeg' }));
 
   // 휴대폰: 공유 시트 → "이미지 저장"으로 사진 앱에 저장 (여러 장도 한 번에)
   if (isTouch && navigator.canShare?.({ files })) {
