@@ -252,7 +252,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   position: relative;
   z-index: 2;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   padding-top: 8px;
 }
 
@@ -267,18 +268,18 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .chevron-btn svg { transition: transform 0.2s; }
 .film-drawer.open .chevron-btn svg { transform: rotate(180deg); }
 
-/* 쉐브론 위로 떠오르는 판: 강도 + 필름 캐러셀 */
+/* 쉐브론 위로 펼쳐지는 판: 강도 + 필름 캐러셀.
+   사진 위에 겹치지 않고 자리를 차지해서, 어떤 비율이든 사진을 가리지 않는다 (미리보기가 그만큼 비켜남) */
 .film-panel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
+  width: 100%;
+  display: grid;
+  grid-template-rows: 0fr;
   opacity: 0;
-  transform: translateY(8px);
   pointer-events: none;
-  transition: opacity 0.2s, transform 0.2s;
+  transition: grid-template-rows 0.25s ease, opacity 0.2s;
 }
-.film-drawer.open .film-panel { opacity: 1; transform: none; pointer-events: auto; }
+.film-panel-inner { min-height: 0; overflow: hidden; }
+.film-drawer.open .film-panel { grid-template-rows: 1fr; opacity: 1; pointer-events: auto; }
 
 .film-carousel {
   position: relative;

@@ -48,12 +48,14 @@
 
     <div class="film-drawer" id="filmDrawer">
       <div class="film-panel">
-        <label class="strength-row">
-          <span>강도</span>
-          <input type="range" id="strength" min="0" max="100" step="1" value="100">
-          <span class="strength-value" id="strengthValue">100</span>
-        </label>
-        <div class="film-carousel" id="filmCarousel" role="listbox" aria-label="필름 선택"></div>
+        <div class="film-panel-inner">
+          <label class="strength-row">
+            <span>강도</span>
+            <input type="range" id="strength" min="0" max="100" step="1" value="100">
+            <span class="strength-value" id="strengthValue">100</span>
+          </label>
+          <div class="film-carousel" id="filmCarousel" role="listbox" aria-label="필름 선택"></div>
+        </div>
       </div>
       <button class="chevron-btn" id="filmToggle" aria-label="필름 선택" aria-expanded="false">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
