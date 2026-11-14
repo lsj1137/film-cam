@@ -47,41 +47,69 @@ const state = {
   shotUrl: null,
 };
 
-// ---------- 필름 선택 (위로 펼쳐지는 목록) ----------
-const filmBtn = $('#filmBtn');
-const filmMenu = $('#filmMenu');
+// ---------- 필름 선택: 쉐브론으로 여닫는 가로 캐러셀 ----------
+const filmDrawer = $('#filmDrawer');
+const filmToggle = $('#filmToggle');
+const carousel = $('#filmCarousel');
 for (const p of PRESETS) {
-  const li = document.createElement('li');
-  li.role = 'option';
-  li.dataset.id = p.id;
-  li.innerHTML = `<span class="name"></span><span class="desc"></span>`;
-  li.querySelector('.name').textContent = p.label;
-  li.querySelector('.desc').textContent = p.desc;
-  li.addEventListener('click', () => {
+  const btn = document.createElement('button');
+  btn.className = 'film-item';
+  btn.role = 'option';
+  btn.dataset.id = p.id;
+  btn.textContent = p.label;
+  btn.addEventListener('click', () => {
     selectPreset(p);
-    setFilmMenu(false);
+    centerFilm('smooth');
   });
-  filmMenu.append(li);
+  carousel.append(btn);
 }
 
-function setFilmMenu(open) {
-  filmMenu.hidden = !open;
-  filmBtn.setAttribute('aria-expanded', String(open));
+const filmItem = (id) => carousel.querySelector(`[data-id="${id}"]`);
+function centerFilm(behavior = 'instant') {
+  const el = filmItem(state.preset.id);
+  carousel.scrollTo({ left: el.offsetLeft + el.offsetWidth / 2 - carousel.clientWidth / 2, behavior });
 }
-filmBtn.addEventListener('click', () => setFilmMenu(filmMenu.hidden));
-// 목록 밖을 누르면 닫기
-document.addEventListener('pointerdown', (e) => {
-  if (!filmMenu.hidden && !e.target.closest('.film-picker')) setFilmMenu(false);
+
+function setDrawer(open) {
+  filmDrawer.classList.toggle('open', open);
+  filmToggle.setAttribute('aria-expanded', String(open));
+  if (open) centerFilm();
+}
+filmToggle.addEventListener('click', () => setDrawer(!filmDrawer.classList.contains('open')));
+
+// 옆으로 밀다가 멈추면 가운데 온 필름을 고른다
+let scrollTimer;
+carousel.addEventListener('scroll', () => {
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    const mid = carousel.scrollLeft + carousel.clientWidth / 2;
+    let best;
+    for (const el of carousel.children) {
+      const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid);
+      if (!best || d < best.d) best = { el, d };
+    }
+    const p = PRESETS.find((x) => x.id === best.el.dataset.id);
+    if (p !== state.preset) selectPreset(p);
+  }, 120);
 });
 
-function selectPreset(p) {
+let nameTimer;
+function showFilmName(text) {
+  if (state.bypass) return;
+  badge.textContent = text;
+  badge.classList.add('on', 'film-name');
+  clearTimeout(nameTimer);
+  nameTimer = setTimeout(() => badge.classList.remove('on', 'film-name'), 900);
+}
+
+function selectPreset(p, { quiet = false } = {}) {
   state.preset = p;
   localStorage.setItem('preset', p.id);
-  $('#filmName').textContent = p.label;
-  for (const li of filmMenu.children) li.setAttribute('aria-selected', String(li.dataset.id === p.id));
+  for (const el of carousel.children) el.setAttribute('aria-selected', String(el.dataset.id === p.id));
+  if (!quiet) showFilmName(p.label);
   if (state.mode === 'image') drawImage();
 }
-selectPreset(state.preset);
+selectPreset(state.preset, { quiet: true });
 
 // ---------- 카메라 ----------
 function showPlaceholder(text, withButton = true) {
@@ -253,6 +281,9 @@ const viewfinder = $('#viewfinder');
 function setBypass(on) {
   if (state.bypass === on) return;
   state.bypass = on;
+  clearTimeout(nameTimer);
+  badge.classList.remove('film-name');
+  badge.textContent = '원본';
   badge.classList.toggle('on', on);
   if (state.mode === 'image') drawImage();
 }
