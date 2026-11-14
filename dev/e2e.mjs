@@ -271,6 +271,23 @@ await test('카메라 화면에서 영상이 멈추면 저절로 복구', `
   return { paused: T.q('#video').paused, moving: T.q('#video').currentTime > t0 };
 `, (v) => !v.paused && v.moving);
 
+await test('앱을 잠깐 내렸다 돌아와도 카메라를 다시 요청하지 않음 (권한 재질문 방지)', `
+  let calls = 0;
+  const orig = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia = (c) => { calls++; return orig(c); };
+  const before = T.q('#video').srcObject.getVideoTracks()[0];
+  const setHidden = (h) => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => h }); document.dispatchEvent(new Event('visibilitychange')); };
+  setHidden(true); await T.sleep(500); setHidden(false); await T.sleep(800);
+  const quickSwitch = { calls, sameTrack: T.q('#video').srcObject?.getVideoTracks()[0] === before };
+  // 아이폰이 그사이 카메라를 끊었다면 그때만 다시 요청
+  before.stop();
+  setHidden(true); await T.sleep(200); setHidden(false); await T.sleep(1500);
+  const afterCut = { calls, live: T.q('#video').srcObject?.getVideoTracks()[0]?.readyState };
+  delete document.hidden;
+  navigator.mediaDevices.getUserMedia = orig;
+  return { quickSwitch, afterCut };
+`, (v) => v.quickSwitch.calls === 0 && v.quickSwitch.sameTrack && v.afterCut.calls === 1 && v.afterCut.live === 'live');
+
 await test('서비스 워커 등록 (오프라인·홈 화면 앱)', `
   const reg = await navigator.serviceWorker.getRegistration();
   return { registered: !!reg };

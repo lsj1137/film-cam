@@ -236,11 +236,18 @@ $('#flipBtn').addEventListener('click', () => {
   else startCamera();
 });
 
-// 앱을 내리면 카메라를 끄고, 돌아오면 다시 켠다
+// 앱을 잠깐 내렸다 돌아올 때는 카메라를 끄지 않는다.
+// 다시 켜면(getUserMedia) 아이폰이 카메라 권한을 또 물어보기 때문. 아이폰은 앱이 뒤로 가면 알아서 카메라를 멈춘다.
+// 돌아왔을 때 실제로 끊겨 있을 때만 다시 켜고, 오래(1분) 비우면 그때는 끈다 (PC·안드로이드에서 카메라 표시등이 계속 켜져 있지 않게).
+const IDLE_CAMERA_OFF = 60_000;
+let idleTimer;
 document.addEventListener('visibilitychange', () => {
-  if (state.mode !== 'camera') return;
-  if (document.hidden) stopCamera();
-  else startCamera();
+  clearTimeout(idleTimer);
+  if (document.hidden) {
+    idleTimer = setTimeout(stopCamera, IDLE_CAMERA_OFF);
+  } else if (state.mode === 'camera') {
+    ensureCamera();
+  }
 });
 
 // ---------- 사진 불러오기 ----------
