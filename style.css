@@ -433,6 +433,24 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .stamp-btn.on { color: var(--accent); }
 
+/* 정보 프레임 도구: 회전, 제목 */
+.frame-tools {
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  padding-top: 14px;
+}
+.tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 50vw;
+  font-size: 14px;
+  color: rgba(235, 235, 245, 0.75);
+}
+.tool-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-btn.on { color: var(--accent); }
+
 /* 저장 선택: 아이폰 액션 시트 */
 .sheet-layer { position: fixed; inset: 0; z-index: 12; }
 .sheet-backdrop {

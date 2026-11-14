@@ -75,6 +75,17 @@
         <span class="compare-tag right">원본</span>
       </div>
     </div>
+    <!-- 정보 프레임일 때만: 회전, 제목 -->
+    <div class="frame-tools" id="frameTools" hidden>
+      <button class="tool-btn" id="rotateBtn">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>
+        <span>회전</span>
+      </button>
+      <button class="tool-btn" id="titleBtn">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M12 6v13M9 19h6"/></svg>
+        <span id="titleLabel">제목</span>
+      </button>
+    </div>
     <div class="review-bar">
       <button class="text-btn" id="discardBtn">다시 찍기</button>
       <button class="text-btn stamp-btn" id="stampBtn" aria-label="사진에 날짜·정보 넣기">

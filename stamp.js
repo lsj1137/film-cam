@@ -6,7 +6,7 @@ export const STAMPS = [
   { id: 'frame', label: '정보 프레임' },
 ];
 
-// meta: { date, film, zoom, ratio, camera }
+// meta: { date, film, zoom, title }
 export function compose(bitmap, style, meta) {
   const w = bitmap.width;
   const h = bitmap.height;
@@ -127,23 +127,52 @@ function drawFrame(c, bitmap, meta) {
   const pad2 = (n) => String(n).padStart(2, '0');
 
   ctx.textBaseline = 'alphabetic';
-  // 왼쪽: 필름 이름 + 앱 이름
+  // 왼쪽: 제목(있으면) 또는 필름 이름, 아래에 작게 필름 이름·앱 이름
+  const title = meta.title?.trim();
   ctx.textAlign = 'left';
   ctx.fillStyle = '#1d1b19';
-  ctx.font = `600 ${base * 0.045}px ${FONT}`;
-  ctx.fillText(meta.film, left, cy + base * 0.004);
+  ctx.fillText(fitText(ctx, title || meta.film, 600, base * 0.045, (right - left) * 0.62), left, cy + base * 0.004);
   ctx.fillStyle = '#8a847c';
   ctx.font = `500 ${base * 0.024}px ${FONT}`;
   ctx.letterSpacing = `${base * 0.004}px`;
-  ctx.fillText('FILMCAM', left, cy + base * 0.042);
+  ctx.fillText(title ? `${meta.film}  ·  FILMCAM` : 'FILMCAM', left, cy + base * 0.042);
   ctx.letterSpacing = '0px';
 
-  // 오른쪽: 촬영 날짜·시간 + 설정
+  // 오른쪽: 촬영 날짜, 아래에 시간 (줌했으면 배율도)
   ctx.textAlign = 'right';
   ctx.fillStyle = '#1d1b19';
   ctx.font = `500 ${base * 0.032}px ${FONT}`;
-  ctx.fillText(`${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())}  ${pad2(d.getHours())}:${pad2(d.getMinutes())}`, right, cy + base * 0.002);
+  ctx.fillText(`${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())}`, right, cy + base * 0.002);
   ctx.fillStyle = '#8a847c';
   ctx.font = `500 ${base * 0.024}px ${FONT}`;
-  ctx.fillText([`${meta.zoom}×`, meta.ratio, meta.camera].filter(Boolean).join('  ·  '), right, cy + base * 0.042);
+  const time = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  ctx.fillText(meta.zoom > 1 ? `${time}  ·  ${meta.zoom}×` : time, right, cy + base * 0.042);
+}
+
+// 긴 제목은 글자를 줄이고, 그래도 넘치면 뒤를 말줄임
+function fitText(ctx, text, weight, size, maxWidth) {
+  let s = size;
+  ctx.font = `${weight} ${s}px ${FONT}`;
+  while (ctx.measureText(text).width > maxWidth && s > size * 0.7) {
+    s *= 0.94;
+    ctx.font = `${weight} ${s}px ${FONT}`;
+  }
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(`${t}…`).width > maxWidth) t = t.slice(0, -1);
+  return `${t}…`;
+}
+
+// 사진을 90° 단위로 돌린다
+export function rotate(bitmap, deg) {
+  if (!deg) return bitmap;
+  const swap = deg % 180 !== 0;
+  const c = document.createElement('canvas');
+  c.width = swap ? bitmap.height : bitmap.width;
+  c.height = swap ? bitmap.width : bitmap.height;
+  const ctx = c.getContext('2d');
+  ctx.translate(c.width / 2, c.height / 2);
+  ctx.rotate((deg * Math.PI) / 180);
+  ctx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+  return c;
 }

@@ -1,5 +1,5 @@
 import { FilmRenderer, PRESETS } from './film.js';
-import { STAMPS, compose, framePad } from './stamp.js';
+import { STAMPS, compose, framePad, rotate } from './stamp.js';
 import { withExif } from './exif.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -45,6 +45,8 @@ const state = {
   stamp: STAMPS.find((s) => s.id === localStorage.getItem('stamp')) ?? STAMPS[0],
   imageDate: null,    // 불러온 사진의 날짜
   shot: null,         // 찍은 사진 { film, original, meta }
+  rotation: 0,        // 정보 프레임에서 사진 회전 (0/90/180/270)
+  title: '',          // 정보 프레임 제목
   out: null,          // 저장할 최종 파일 { film, original }
   zoom: 1,
   nativeZoom: null,   // 카메라 자체 줌 범위 {min, max} (지원할 때만)
@@ -368,8 +370,6 @@ shutter.addEventListener('click', async () => {
       film: state.preset.label,
       filmId: state.preset.id,
       zoom: Number(state.zoom.toFixed(1)),
-      ratio: state.ratio.label,
-      camera: state.mode === 'camera' ? (state.mirror ? '전면' : '후면') : '',
     };
     if (film && original) await showShot(film, original, meta);
   } finally {
@@ -384,6 +384,9 @@ const originalImg = $('#originalImg');
 async function showShot(film, original, meta) {
   const [filmBmp, originalBmp] = await Promise.all([createImageBitmap(film), createImageBitmap(original)]);
   state.shot = { film, original, filmBmp, originalBmp, meta };
+  state.rotation = 0;
+  state.title = '';
+  updateFrameTools();
   await renderReview();
   setComparePos(0.5);
   setSaveSheet(false);
@@ -401,12 +404,16 @@ async function renderReview() {
   let ar = filmBmp.width / filmBmp.height;
   let inset = ['0px', '0px'];
   if (style !== 'none') {
-    const fc = compose(filmBmp, style, meta);
-    const oc = compose(originalBmp, style, meta);
+    const deg = style === 'frame' ? state.rotation : 0;
+    const filmSrc = rotate(filmBmp, deg);
+    const originalSrc = rotate(originalBmp, deg);
+    const info = { ...meta, title: state.title };
+    const fc = compose(filmSrc, style, info);
+    const oc = compose(originalSrc, style, info);
     [filmOut, originalOut] = await Promise.all([toBlob(fc), toBlob(oc)]);
     ar = fc.width / fc.height;
     if (style === 'frame') {
-      const pad = framePad(filmBmp.width, filmBmp.height);
+      const pad = framePad(filmSrc.width, filmSrc.height);
       inset = [`${(pad / fc.width) * 100}%`, `${(pad / fc.height) * 100}%`];
     }
   }
@@ -437,9 +444,31 @@ stampBtn.addEventListener('click', async () => {
   state.stamp = STAMPS[(STAMPS.indexOf(state.stamp) + 1) % STAMPS.length];
   localStorage.setItem('stamp', state.stamp.id);
   applyStampLabel();
+  updateFrameTools();
   if (state.shot) await renderReview();
 });
 applyStampLabel();
+
+// ---------- 정보 프레임: 회전, 제목 ----------
+function updateFrameTools() {
+  $('#frameTools').hidden = state.stamp.id !== 'frame';
+  $('#titleLabel').textContent = state.title || '제목';
+  $('#titleBtn').classList.toggle('on', !!state.title);
+}
+
+$('#rotateBtn').addEventListener('click', async () => {
+  state.rotation = (state.rotation + 270) % 360; // 아이콘(↺)처럼 반시계 방향
+  await renderReview();
+});
+
+$('#titleBtn').addEventListener('click', async () => {
+  // 아이폰 기본 입력 창을 그대로 쓴다
+  const text = prompt('사진 아래에 넣을 제목', state.title);
+  if (text === null) return;
+  state.title = text.trim().slice(0, 40);
+  updateFrameTools();
+  await renderReview();
+});
 
 // 비교선: 사진 아무 데나 누르거나 끌면 그 위치로 선이 온다
 function setComparePos(t) {
