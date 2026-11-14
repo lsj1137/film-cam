@@ -245,6 +245,7 @@ function exitImageMode() {
   closeImage.hidden = true;
   shutter.classList.remove('image-mode');
   shutter.setAttribute('aria-label', '촬영');
+  if (reloadIfUpdated()) return;
   startCamera();
 }
 
@@ -565,6 +566,7 @@ $('#saveBackdrop').addEventListener('click', () => setSaveSheet(false));
 function closeReview() {
   review.hidden = true;
   if (state.mode === 'image') drawImage();
+  reloadIfUpdated();
 }
 
 $('#discardBtn').addEventListener('click', closeReview);
@@ -731,8 +733,30 @@ for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
 document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
 
 // ---------- 시작 ----------
+// ---------- 자동 업데이트 ----------
+// 아이폰 홈 화면 앱은 내렸다 다시 열면 메모리에 있던 옛 버전을 그대로 이어 쓴다.
+// 그래서 앱으로 돌아올 때마다 새 버전을 확인하고, 있으면 다시 불러온다.
+// 단, 찍은 사진을 보고 있거나 불러온 사진을 편집 중이면 끝날 때까지 기다린다.
+let updateReady = false;
+
+function reloadIfUpdated() {
+  if (!updateReady || !review.hidden || state.capturing || state.mode !== 'camera') return false;
+  location.reload();
+  return true;
+}
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  const hadController = !!navigator.serviceWorker.controller; // 처음 설치될 때는 다시 불러올 필요 없음
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) reg.update().catch(() => {});
+    });
+  }).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return;
+    updateReady = true;
+    reloadIfUpdated();
+  });
 }
 
 startCamera();
