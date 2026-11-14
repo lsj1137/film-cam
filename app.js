@@ -363,21 +363,48 @@ shutter.addEventListener('click', async () => {
   }
 });
 
+const compare = $('#compare');
+const originalImg = $('#originalImg');
+
 function showShot(film, original) {
   state.shotBlob = film;
   state.originalBlob = original;
   if (state.shotUrl) URL.revokeObjectURL(state.shotUrl);
+  if (state.originalUrl) URL.revokeObjectURL(state.originalUrl);
   state.shotUrl = URL.createObjectURL(film);
+  state.originalUrl = URL.createObjectURL(original);
   reviewImg.src = state.shotUrl;
+  originalImg.src = state.originalUrl;
+  compare.style.setProperty('--ar', canvas.width / canvas.height);
+  setComparePos(0.5);
   setSaveSheet(false);
   review.hidden = false;
 }
 
+// 비교선: 사진 아무 데나 누르거나 끌면 그 위치로 선이 온다
+function setComparePos(t) {
+  compare.style.setProperty('--pos', `${Math.min(1, Math.max(0, t)) * 100}%`);
+}
+function dragCompare(e) {
+  const r = compare.getBoundingClientRect();
+  setComparePos((e.clientX - r.left) / r.width);
+}
+let comparing = false;
+compare.addEventListener('pointerdown', (e) => {
+  comparing = true;
+  try { compare.setPointerCapture(e.pointerId); } catch {}
+  dragCompare(e);
+});
+compare.addEventListener('pointermove', (e) => {
+  if (comparing) dragCompare(e);
+});
+for (const ev of ['pointerup', 'pointercancel']) compare.addEventListener(ev, () => { comparing = false; });
+
 const saveSheet = $('#saveSheet');
 function setSaveSheet(open) {
   saveSheet.hidden = !open;
-  $('#reviewActions').hidden = open;
 }
+$('#saveBackdrop').addEventListener('click', () => setSaveSheet(false));
 
 function closeReview() {
   review.hidden = true;
