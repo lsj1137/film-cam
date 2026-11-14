@@ -10,6 +10,7 @@
 
 html, body {
   height: 100%;
+  touch-action: manipulation; /* 두 번 탭 확대 끄기 */
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -19,6 +20,7 @@ html, body {
   overscroll-behavior: none;
 }
 
+button, label { touch-action: manipulation; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 
 .app {
@@ -309,3 +311,16 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   padding-top: 18px;
 }
 .review-actions .pill { min-width: 120px; }
+
+/* 저장할 때 원본도 같이 저장할지 묻기 */
+.save-sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: 16px;
+  font-size: 15px;
+}
+.save-choices { display: flex; gap: 12px; }
+.save-choices .pill { min-width: 130px; }
+.link-btn { font-size: 13px; color: var(--muted); padding: 4px 12px; }

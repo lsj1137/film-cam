@@ -107,7 +107,7 @@ async function startCamera() {
 
 function loop() {
   requestAnimationFrame(loop);
-  if (state.mode !== 'camera' || !state.stream || video.readyState < 2 || !review.hidden) return;
+  if (state.mode !== 'camera' || !state.stream || video.readyState < 2 || !review.hidden || state.capturing) return;
   renderer.upload(video, video.videoWidth, video.videoHeight);
   renderer.render(state.preset, { mirror: state.mirror, bypass: state.bypass, ratio: state.ratio.value });
   syncFrame();
@@ -213,6 +213,7 @@ shutter.addEventListener('click', async () => {
   if (state.mode === 'camera' && (!state.stream || video.readyState < 2)) return;
   state.capturing = true;
   try {
+    const opts = { ratio: state.ratio.value };
     if (state.mode === 'camera') {
       const lightOff = state.flash && canFlash() ? await lightOn() : null;
       const flash = $('#flash');
@@ -220,25 +221,36 @@ shutter.addEventListener('click', async () => {
       void flash.offsetWidth;
       flash.classList.add('on');
       renderer.upload(video, video.videoWidth, video.videoHeight);
-      renderer.render(state.preset, { mirror: state.mirror, ratio: state.ratio.value });
       lightOff?.();
+      opts.mirror = state.mirror;
     } else {
-      renderer.render(state.preset, { seed: 0.5, ratio: state.ratio.value });
+      opts.seed = 0.5;
     }
-    await showShot();
+    // 같은 프레임으로 원본(색감 없이, 같은 비율)과 필름 사진을 하나씩 만든다
+    renderer.render(state.preset, { ...opts, bypass: true });
+    const original = await renderer.toBlob();
+    renderer.render(state.preset, opts);
+    const film = await renderer.toBlob();
+    if (film && original) showShot(film, original);
   } finally {
     state.capturing = false;
   }
 });
 
-async function showShot() {
-  const blob = await renderer.toBlob();
-  if (!blob) return;
-  state.shotBlob = blob;
+function showShot(film, original) {
+  state.shotBlob = film;
+  state.originalBlob = original;
   if (state.shotUrl) URL.revokeObjectURL(state.shotUrl);
-  state.shotUrl = URL.createObjectURL(blob);
+  state.shotUrl = URL.createObjectURL(film);
   reviewImg.src = state.shotUrl;
+  setSaveSheet(false);
   review.hidden = false;
+}
+
+const saveSheet = $('#saveSheet');
+function setSaveSheet(open) {
+  saveSheet.hidden = !open;
+  $('#reviewActions').hidden = open;
 }
 
 function closeReview() {
@@ -247,23 +259,34 @@ function closeReview() {
 }
 
 $('#discardBtn').addEventListener('click', closeReview);
+$('#saveBtn').addEventListener('click', () => setSaveSheet(true));
+$('#saveCancel').addEventListener('click', () => setSaveSheet(false));
+$('#saveFilmOnly').addEventListener('click', () => save(false));
+$('#saveWithOriginal').addEventListener('click', () => save(true));
 
-$('#saveBtn').addEventListener('click', async () => {
-  const file = new File([state.shotBlob], fileName(), { type: 'image/jpeg' });
+async function save(withOriginal) {
+  const stamp = timeStamp();
+  const files = [new File([state.shotBlob], `filmcam_${stamp}.jpg`, { type: 'image/jpeg' })];
+  if (withOriginal) files.push(new File([state.originalBlob], `filmcam_${stamp}_original.jpg`, { type: 'image/jpeg' }));
 
-  // 휴대폰: 공유 시트 → "이미지 저장"으로 사진 앱에 저장
-  if (isTouch && navigator.canShare?.({ files: [file] })) {
+  // 휴대폰: 공유 시트 → "이미지 저장"으로 사진 앱에 저장 (여러 장도 한 번에)
+  if (isTouch && navigator.canShare?.({ files })) {
     try {
-      await navigator.share({ files: [file] });
+      await navigator.share({ files });
       closeReview();
     } catch (e) {
-      if (e.name !== 'AbortError') download(file);
+      if (e.name !== 'AbortError') downloadAll(files);
     }
     return;
   }
-  download(file);
+  downloadAll(files);
   closeReview();
-});
+}
+
+function downloadAll(files) {
+  // 브라우저가 동시 다운로드를 막지 않도록 조금씩 띄워서 받는다
+  files.forEach((file, i) => setTimeout(() => download(file), i * 400));
+}
 
 function download(file) {
   const a = document.createElement('a');
@@ -273,10 +296,10 @@ function download(file) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-function fileName() {
+function timeStamp() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  return `filmcam_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.jpg`;
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
 // ---------- 사진 비율 ----------
@@ -350,6 +373,12 @@ function toast(text) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('on'), 2800);
 }
+
+// ---------- 두 번 탭 확대 · 핀치 확대 막기 (iOS는 user-scalable=no 를 무시함) ----------
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+}
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
 
 // ---------- 시작 ----------
 if ('serviceWorker' in navigator) {

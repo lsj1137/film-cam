@@ -60,9 +60,17 @@
 
   <div class="review" id="review" hidden>
     <img id="reviewImg" alt="찍은 사진">
-    <div class="review-actions">
+    <div class="review-actions" id="reviewActions">
       <button class="pill" id="discardBtn">다시 찍기</button>
       <button class="pill primary" id="saveBtn">저장</button>
+    </div>
+    <div class="save-sheet" id="saveSheet" hidden>
+      <p>원본 사진도 같이 저장할까요?</p>
+      <div class="save-choices">
+        <button class="pill" id="saveFilmOnly">필름 사진만</button>
+        <button class="pill primary" id="saveWithOriginal">원본도 함께</button>
+      </div>
+      <button class="link-btn" id="saveCancel">취소</button>
     </div>
   </div>
 
