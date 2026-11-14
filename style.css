@@ -50,6 +50,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   border-radius: 999px;
   color: var(--muted);
 }
+/* 폰을 옆으로 눕히면 아이콘도 같이 돌아간다 (아이폰 카메라처럼) */
+.top-btn,
+.side-btn { transition: transform 0.3s ease, color 0.15s; }
+.app[data-tilt="left"] .top-btn,
+.app[data-tilt="left"] .side-btn { transform: rotate(90deg); }
+.app[data-tilt="right"] .top-btn,
+.app[data-tilt="right"] .side-btn { transform: rotate(-90deg); }
+
 .top-btn.ratio { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: var(--text); }
 .top-btn[aria-pressed="true"] { color: var(--accent); }
 .top-btn .slash { display: inline; }

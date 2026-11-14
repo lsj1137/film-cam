@@ -346,6 +346,7 @@ shutter.addEventListener('click', async () => {
   if (state.capturing) return;
   if (state.mode === 'camera' && (!state.stream || video.readyState < 2)) return;
   state.capturing = true;
+  const deg = captureRotation(); // 폰을 가로로 들었으면 사진을 가로로 돌린다
   shutter.classList.add('busy');
   try {
     const opts = { ratio: state.ratio.value, zoom: digitalZoom() };
@@ -372,7 +373,7 @@ shutter.addEventListener('click', async () => {
       filmId: state.preset.id,
       zoom: Number(state.zoom.toFixed(1)),
     };
-    if (film && original) await showShot(film, original, meta);
+    if (film && original) await showShot(film, original, meta, deg);
   } finally {
     state.capturing = false;
     shutter.classList.remove('busy');
@@ -382,8 +383,15 @@ shutter.addEventListener('click', async () => {
 const compare = $('#compare');
 const originalImg = $('#originalImg');
 
-async function showShot(film, original, meta) {
-  const [filmBmp, originalBmp] = await Promise.all([createImageBitmap(film), createImageBitmap(original)]);
+const canvasToBlob = (c) => new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92));
+
+async function showShot(film, original, meta, deg = 0) {
+  let [filmBmp, originalBmp] = await Promise.all([createImageBitmap(film), createImageBitmap(original)]);
+  if (deg) {
+    filmBmp = rotate(filmBmp, deg);
+    originalBmp = rotate(originalBmp, deg);
+    [film, original] = await Promise.all([canvasToBlob(filmBmp), canvasToBlob(originalBmp)]);
+  }
   state.shot = { film, original, filmBmp, originalBmp, meta };
   state.rotation = 0;
   state.title = '';
@@ -399,7 +407,7 @@ async function showShot(film, original, meta) {
 async function renderReview() {
   const { film, original, filmBmp, originalBmp, meta } = state.shot;
   const style = state.stamp.id;
-  const toBlob = (c) => new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92));
+  const toBlob = canvasToBlob;
   let filmOut = film;
   let originalOut = original;
   let ar = filmBmp.width / filmBmp.height;
@@ -626,6 +634,44 @@ function toast(text) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('on'), 2800);
 }
+
+// ---------- 기울기로 가로 촬영 ----------
+// 화면은 세로로 고정된 채, 폰을 옆으로 눕히면 찍힌 사진을 가로로 돌린다.
+// left: 폰 윗부분이 왼쪽으로 (반시계로 눕힘), right: 폰 윗부분이 오른쪽으로
+let tilt = 'portrait';
+
+function onOrientation(e) {
+  const { beta, gamma } = e;
+  if (beta == null || gamma == null) return;
+  let next = tilt;
+  // gamma > 0: 오른쪽 모서리가 내려감 = 시계 방향으로 눕힘 (윗부분이 오른쪽)
+  if (Math.abs(gamma) > 55 && Math.abs(beta) < 50) next = gamma > 0 ? 'right' : 'left';
+  else if (Math.abs(gamma) < 30 && Math.abs(beta) > 45) next = 'portrait';
+  // 그 사이 각도이거나 폰을 바닥에 눕혔을 때는 이전 방향을 유지
+  if (next === tilt) return;
+  tilt = next;
+  $('.app').dataset.tilt = tilt;
+}
+
+function captureRotation() {
+  // 불러온 사진이나, 화면 자체가 가로로 돌아간 경우(영상도 이미 가로)는 돌리지 않는다
+  if (state.mode !== 'camera' || matchMedia('(orientation: landscape)').matches) return 0;
+  return tilt === 'left' ? 270 : tilt === 'right' ? 90 : 0;
+}
+
+(function enableTilt() {
+  const DOE = window.DeviceOrientationEvent;
+  if (!DOE) return;
+  const start = () => addEventListener('deviceorientation', onOrientation);
+  if (typeof DOE.requestPermission === 'function') {
+    // 아이폰은 사용자가 화면을 한 번 눌렀을 때만 센서 권한을 물어볼 수 있다
+    document.addEventListener('click', () => {
+      DOE.requestPermission().then((r) => r === 'granted' && start()).catch(() => {});
+    }, { once: true });
+  } else {
+    start();
+  }
+})();
 
 // ---------- 두 번 탭 확대 · 핀치 확대 막기 (iOS는 user-scalable=no 를 무시함) ----------
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
